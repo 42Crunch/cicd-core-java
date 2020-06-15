@@ -7,6 +7,7 @@ package com.xliic.cicd.audit.client;
 
 public interface ClientConstants {
     static final String PLATFORM_URL = "https://platform.42crunch.com";
+    static final String DEV_PLATFORM_URL = "https://platform-dev.42crunch.com";
     static int ASSESSMENT_MAX_WAIT = 60000;
     static int ASSESSMENT_RETRY = 5000;
     static int MAX_NAME_LEN = 64;

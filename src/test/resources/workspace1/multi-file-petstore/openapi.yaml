@@ -1,0 +1,29 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Swagger Petstore
+  license:
+    name: MIT
+
+servers:
+  - url: http://petstore.swagger.io/v1
+
+paths:
+  /pets:
+    $ref: paths/pets/../pets/path.yaml
+
+  /pets/{petId}:
+    $ref: paths/pets/%7BpetId%7D/path.yaml
+
+  /v1/auth/newcustomer: # Causes a new customer email to be sent
+    $ref: "v1/auth/newcustomer.yml#/paths/~1auth~1newcustomer"
+
+  /foo: # causes a new customer email to be sent
+    $ref: v1/auth/newcustomer.yml#/paths/~1foo
+
+#  /bar:
+#    $ref: "#/paths/foo"
+
+components:
+  schemas:
+    $ref: schemas/index.yaml

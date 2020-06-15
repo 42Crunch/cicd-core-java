@@ -45,6 +45,7 @@ public class Client {
     private static String proxyHost;
     private static int proxyPort;
     private static String userAgent;
+    private static String platformUrl = ClientConstants.PLATFORM_URL;
 
     public static void setUserAgent(String userAgent) {
         Client.userAgent = userAgent;
@@ -55,9 +56,13 @@ public class Client {
         Client.proxyPort = proxyPort;
     }
 
+    public static void setPlatformUrl(String platformUrl) {
+        Client.platformUrl = platformUrl;
+    }
+
     public static Maybe<RemoteApi> createApi(String collectionId, String name, String json, Secret apiKey,
             Logger logger) throws IOException {
-        HttpPost request = new HttpPost(ClientConstants.PLATFORM_URL + "/api/v1/apis");
+        HttpPost request = new HttpPost(platformUrl + "/api/v1/apis");
 
         HttpEntity data = MultipartEntityBuilder
                 .create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE).addBinaryBody("specfile",
@@ -81,7 +86,7 @@ public class Client {
             return new Maybe<RemoteApi>(status.getError());
         }
         // update the api
-        HttpPut request = new HttpPut(ClientConstants.PLATFORM_URL + "/api/v1/apis/" + apiId);
+        HttpPut request = new HttpPut(platformUrl + "/api/v1/apis/" + apiId);
         String encodedJson = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
         request.setEntity(
                 new StringEntity(String.format("{\"specfile\": \"%s\"}", encodedJson), ContentType.APPLICATION_JSON));
@@ -93,7 +98,7 @@ public class Client {
     }
 
     public static Maybe<String> deleteApi(String apiId, Secret apiKey, Logger logger) throws IOException {
-        HttpDelete request = new HttpDelete(String.format("%s/api/v1/apis/%s", ClientConstants.PLATFORM_URL, apiId));
+        HttpDelete request = new HttpDelete(String.format("%s/api/v1/apis/%s", platformUrl, apiId));
         return new ProxyClient<String>(request, apiKey, String.class, logger).execute();
     }
 
@@ -102,8 +107,7 @@ public class Client {
         if (api.isError()) {
             return new Maybe<AssessmentResponse>(api.getError());
         }
-        HttpGet request = new HttpGet(
-                ClientConstants.PLATFORM_URL + "/api/v1/apis/" + api.getResult().apiId + "/assessmentreport");
+        HttpGet request = new HttpGet(platformUrl + "/api/v1/apis/" + api.getResult().apiId + "/assessmentreport");
         ProxyClient<AssessmentResponse> client = new ProxyClient<AssessmentResponse>(request, apiKey,
                 AssessmentResponse.class, logger);
 
@@ -135,7 +139,7 @@ public class Client {
     }
 
     public static Maybe<ApiStatus> readApiStatus(String apiId, Secret apiKey, Logger logger) throws IOException {
-        HttpGet request = new HttpGet(ClientConstants.PLATFORM_URL + "/api/v1/apis/" + apiId);
+        HttpGet request = new HttpGet(platformUrl + "/api/v1/apis/" + apiId);
         Maybe<Api> result = new ProxyClient<Api>(request, apiKey, Api.class, logger).execute();
         if (result.isError()) {
             return new Maybe<ApiStatus>(result.getError());
@@ -146,19 +150,18 @@ public class Client {
 
     public static Maybe<ApiCollection> listCollection(String collectionId, Secret apiKey, Logger logger)
             throws IOException {
-        HttpGet request = new HttpGet(
-                String.format("%s/api/v1/collections/%s/apis", ClientConstants.PLATFORM_URL, collectionId));
+        HttpGet request = new HttpGet(String.format("%s/api/v1/collections/%s/apis", platformUrl, collectionId));
         return new ProxyClient<ApiCollection>(request, apiKey, ApiCollection.class, logger).execute();
     }
 
     public static Maybe<ApiCollections> listCollections(Secret apiKey, Logger logger) throws IOException {
-        HttpGet request = new HttpGet(ClientConstants.PLATFORM_URL + "/api/v1/collections");
+        HttpGet request = new HttpGet(platformUrl + "/api/v1/collections");
         return new ProxyClient<ApiCollections>(request, apiKey, ApiCollections.class, logger).execute();
     }
 
     public static Maybe<ApiCollections.ApiCollection> createCollection(String collectionName, Secret apiKey,
             Logger logger) throws IOException {
-        HttpPost request = new HttpPost(ClientConstants.PLATFORM_URL + "/api/v1/collections");
+        HttpPost request = new HttpPost(platformUrl + "/api/v1/collections");
         request.setEntity(new StringEntity(String.format("{\"name\": \"%s\", \"isShared\": false}", collectionName),
                 ContentType.APPLICATION_JSON));
         return new ProxyClient<ApiCollections.ApiCollection>(request, apiKey, ApiCollections.ApiCollection.class,
@@ -204,7 +207,7 @@ public class Client {
                 if (status == 409 && responseBody.contains("limit reached")) {
                     return new Maybe<T>(new ErrorMessage(String.format(
                             "You have reached your maximum number of APIs. Please sign into %s and upgrade your account.",
-                            ClientConstants.PLATFORM_URL)));
+                            platformUrl)));
                 } else if (status == 403) {
                     return new Maybe<T>(new ErrorMessage(
                             "Received 'Forbidden 403' response. Check that your API IDs are correct and API Token has required permissions: "

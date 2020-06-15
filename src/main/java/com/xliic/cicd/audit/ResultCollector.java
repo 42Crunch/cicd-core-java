@@ -6,5 +6,5 @@
 package com.xliic.cicd.audit;
 
 public interface ResultCollector {
-    public void collect(String filename, String[] failures, String report);
+    public void collect(String filename, int score, String[] failures, String report);
 }

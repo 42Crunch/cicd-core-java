@@ -46,6 +46,7 @@ public class Auditor {
     private Logger logger;
     private Secret apiKey;
     private ResultCollector resultCollector;
+    private String platformUrl = ClientConstants.PLATFORM_URL;
 
     public Auditor(OpenApiFinder finder, Logger logger, Secret apiKey) {
         this.finder = finder;
@@ -60,6 +61,11 @@ public class Auditor {
     public void setProxy(String proxyHost, int proxyPort) {
         Client.setProxy(proxyHost, proxyPort);
         logger.log(String.format("Using proxy server: %s:%d ", proxyHost, proxyPort));
+    }
+
+    public void setPlatformUrl(String platformUrl) {
+        this.platformUrl = platformUrl;
+        Client.setPlatformUrl(platformUrl);
     }
 
     public String audit(Workspace workspace, String collectionName, int minScore)
@@ -186,10 +192,10 @@ public class Auditor {
             report.forEach((filename, summary) -> {
                 String reportUrl = null;
                 if (summary.api.isOk()) {
-                    reportUrl = String.format("%s/apis/%s/security-audit-report", ClientConstants.PLATFORM_URL,
+                    reportUrl = String.format("%s/apis/%s/security-audit-report", platformUrl,
                             summary.api.getResult().apiId);
                 }
-                this.resultCollector.collect(filename, summary.failures, reportUrl);
+                this.resultCollector.collect(filename, summary.score, summary.failures, reportUrl);
             });
         }
     }
@@ -206,7 +212,7 @@ public class Auditor {
             }
             if (summary.api.isOk()) {
                 logger.log("    Details:");
-                logger.log(String.format("    %s/apis/%s/security-audit-report", ClientConstants.PLATFORM_URL,
+                logger.log(String.format("    %s/apis/%s/security-audit-report", platformUrl,
                         summary.api.getResult().apiId));
             }
             logger.log("");

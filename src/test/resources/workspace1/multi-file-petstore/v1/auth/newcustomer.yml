@@ -1,0 +1,12 @@
+paths:
+  /auth/newcustomer:
+    get:
+      responses:
+        "200":
+          description: A paged array of pets
+
+  /foo:
+    get:
+      responses:
+        "200":
+          description: A paged array of pets
