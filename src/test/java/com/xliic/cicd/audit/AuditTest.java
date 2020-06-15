@@ -14,7 +14,7 @@ public class AuditTest {
         WorkspaceImpl workspace = new WorkspaceImpl("workspace1");
         Logger logger = new LoggerImpl();
         Finder finder = new Finder(workspace.getDirectory());
-        SecretImpl apiKey = new SecretImpl(System.getenv("XLIIC_API_KEY"));
+        SecretImpl apiKey = new SecretImpl(System.getenv("TEST_API_KEY"));
         ResultCollector resultCollector = new ResultCollectorImpl();
         Auditor auditor = new Auditor(finder, logger, apiKey);
         auditor.setResultCollector(resultCollector);

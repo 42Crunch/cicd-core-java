@@ -4,7 +4,9 @@ node {
     }
 
     stage('Run tests') {
-          sh './test.sh'
+        withCredentials([string(credentialsId: 'b81db935-7187-45b4-b63b-6120e0f05d43', variable: 'TEST_API_KEY')]) {
+            sh './test.sh'
+        }
     }
 
     stage('Cleanup') {
