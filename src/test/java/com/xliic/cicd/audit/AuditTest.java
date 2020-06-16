@@ -19,7 +19,7 @@ public class AuditTest {
         Result result = auditor.results.get("multi-file-petstore/openapi.yaml");
         List<String> failures = Arrays.asList(result.failures);
 
-        assertEquals(result.score, 18);
+        assertEquals(result.score, 42);
         assertTrue(failures.contains("The API score 18 is lower than the set minimum score of 75"));
         assertTrue(failures.contains("Found 35 issues with severity \"medium\" or higher"));
         assertTrue(failures.contains("Found issue \"v3-global-http-clear\""));
