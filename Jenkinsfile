@@ -10,6 +10,7 @@ node {
             }
         } catch(e) {
             slackSend(color: '#FF0000', message: "@anton ${env.JOB_NAME} successfully completed")
+            throw e
         }
     }
 
