@@ -30,7 +30,7 @@
 
   <scm>
     <connection>scm:git:git://github.com/42Crunch/cicd-core-java.git</connection>
-    <developerConnection>scm:git:ssh://github.com:42Crunch/cicd-core-java.git</developerConnection>
+    <developerConnection>scm:git:ssh://git@github.com/42Crunch/cicd-core-java.git</developerConnection>
     <url>http://github.com/42Crunch/cicd-core-java/tree/master</url>
   </scm>
 
