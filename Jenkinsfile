@@ -9,7 +9,7 @@ node {
                 sh './test.sh'
             }
         } catch(e) {
-            slackSend(color: '#FF0000', message: "@anton ${env.JOB_NAME} successfully completed")
+            slackSend(color: '#FF0000', message: "@anton ${env.JOB_NAME} failed tests")
             throw e
         }
     }
