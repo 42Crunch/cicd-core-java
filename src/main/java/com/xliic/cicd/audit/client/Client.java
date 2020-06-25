@@ -11,12 +11,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.xliic.cicd.audit.model.api.ApiCollections;
 import com.xliic.cicd.audit.model.api.ErrorMessage;
 import com.xliic.cicd.audit.model.api.Maybe;
+import com.xliic.cicd.audit.JsonParser;
 import com.xliic.cicd.audit.Logger;
 import com.xliic.cicd.audit.Secret;
 import com.xliic.cicd.audit.model.api.Api;
@@ -195,10 +193,8 @@ public class Client {
                     if (contentClass.equals(String.class)) {
                         return new Maybe<T>((T) EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8));
                     } else {
-                        ObjectMapper mapper = new ObjectMapper();
-                        mapper.registerModule(new JavaTimeModule());
-                        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                        return new Maybe<T>(mapper.readValue(entity.getContent(), contentClass));
+
+                        return new Maybe<T>(JsonParser.parse(entity.getContent(), contentClass));
                     }
                 }
 

@@ -17,6 +17,7 @@ public class AssessmentReport {
     public String openapiState;
     public Section security;
     public Section data;
+    public String[] index;
 
     public static class Section {
         public float score;
@@ -33,11 +34,14 @@ public class AssessmentReport {
 
     public static class Issue {
         public int criticality;
+        public String description;
         public ArrayList<SubIssue> issues;
     }
 
     public static class SubIssue {
         public float score;
+        public int pointer;
+        public String specificDescription;
     }
 
 }

@@ -13,11 +13,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.ClientConstants;
 import com.xliic.cicd.audit.client.RemoteApi;
@@ -181,10 +177,7 @@ public class Auditor {
 
     private AssessmentReport decodeReport(String data) throws JsonParseException, JsonMappingException, IOException {
         byte[] decoded = Base64.getDecoder().decode(data);
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        return mapper.readValue(decoded, AssessmentReport.class);
+        return JsonParser.parse(decoded, AssessmentReport.class);
     }
 
     private void collectResults(Map<String, Summary> report) {
@@ -195,7 +188,7 @@ public class Auditor {
                     reportUrl = String.format("%s/apis/%s/security-audit-report", platformUrl,
                             summary.api.getResult().apiId);
                 }
-                this.resultCollector.collect(filename, summary.score, summary.failures, reportUrl);
+                this.resultCollector.collect(filename, summary.score, summary.report, summary.failures, reportUrl);
             });
         }
     }
@@ -258,15 +251,9 @@ public class Auditor {
     }
 
     private static Maybe<Boolean> isOpenApiFile(String filename, Workspace workspace) {
-        ObjectMapper mapper;
-        if (filename.endsWith(".yaml") || filename.endsWith(".yml")) {
-            mapper = new ObjectMapper(new YAMLFactory());
-        } else {
-            mapper = new ObjectMapper();
-        }
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
-            OpenApiFile openApiFile = mapper.readValue(workspace.read(filename), OpenApiFile.class);
+            OpenApiFile openApiFile = JsonParser.parse(workspace.read(filename), OpenApiFile.class,
+                    filename.toLowerCase().endsWith(".yaml") || filename.toLowerCase().endsWith(".yml"));
             return new Maybe<Boolean>(openApiFile.isOpenApi());
         } catch (Exception ex) {
             return new Maybe<Boolean>(
@@ -350,12 +337,13 @@ public class Auditor {
     private Summary checkAssessment(Maybe<RemoteApi> api, Maybe<AssessmentResponse> assessment,
             FailureConditions conditions) throws JsonParseException, JsonMappingException, IOException {
         if (assessment.isError()) {
-            return new Summary(api, 0, new String[] { assessment.getError().getMessage() });
+            return new Summary(api, 0, null, new String[] { assessment.getError().getMessage() });
         }
 
         AssessmentReport assessmentReport = decodeReport(assessment.getResult().data);
         FailureChecker checker = new FailureChecker();
         ArrayList<String> failures = checker.checkAssessment(assessment.getResult(), assessmentReport, conditions);
-        return new Summary(api, Math.round(assessment.getResult().attr.data.grade), failures.toArray(new String[0]));
+        return new Summary(api, Math.round(assessment.getResult().attr.data.grade), assessmentReport,
+                failures.toArray(new String[0]));
     }
 }

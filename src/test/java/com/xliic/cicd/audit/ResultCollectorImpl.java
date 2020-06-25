@@ -3,12 +3,14 @@ package com.xliic.cicd.audit;
 import java.util.HashMap;
 import java.util.Set;
 
+import com.xliic.cicd.audit.model.assessment.AssessmentReport;
+
 class ResultCollectorImpl implements ResultCollector {
     HashMap<String, Result> results = new HashMap<String, Result>();
 
     @Override
-    public void collect(String filename, int score, String[] failures, String report) {
-        results.put(filename, new Result(score, failures, report));
+    public void collect(String filename, int score, AssessmentReport report, String[] failures, String reportUrl) {
+        results.put(filename, new Result(score, report, failures, reportUrl));
     }
 
     public Result get(String filename) {
@@ -21,13 +23,15 @@ class ResultCollectorImpl implements ResultCollector {
 
     public static class Result {
         int score;
+        AssessmentReport report;
         String[] failures;
-        String report;
+        String reportUrl;
 
-        Result(int score, String[] failures, String report) {
+        Result(int score, AssessmentReport report, String[] failures, String reportUrl) {
             this.score = score;
-            this.failures = failures;
             this.report = report;
+            this.failures = failures;
+            this.reportUrl = reportUrl;
         }
     }
 }
