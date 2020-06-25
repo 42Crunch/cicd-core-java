@@ -7,6 +7,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.xliic.common.Workspace;
+import com.xliic.openapi.bundler.Bundler;
+import com.xliic.openapi.bundler.Document;
+import com.xliic.openapi.bundler.Mapping;
+import com.xliic.openapi.bundler.Parser;
+import com.xliic.openapi.bundler.Serializer;
 
 public class JsonParser {
 
@@ -36,5 +42,28 @@ public class JsonParser {
 
     public static <T> T parse(InputStream json, Class<T> contentClass) throws IOException {
         return getMapper(false).readValue(json, contentClass);
+    }
+
+    public static Bundled bundle(String filename, Workspace workspace) throws AuditException {
+        try {
+            Parser parser = new Parser(workspace);
+            Serializer serializer = new Serializer();
+            Bundler bundler = new Bundler(serializer);
+            Document document = parser.parse(workspace.absolutize(filename));
+            Mapping mapping = bundler.bundle(document);
+            return new Bundled(serializer.serialize(document), mapping);
+        } catch (Exception e) {
+            throw new AuditException(String.format("Failed to parse file: %s %s", filename, e), e);
+        }
+    }
+
+    public static class Bundled {
+        public final String json;
+        public final Mapping mapping;
+
+        public Bundled(String json, Mapping mapping) {
+            this.json = json;
+            this.mapping = mapping;
+        }
     }
 }

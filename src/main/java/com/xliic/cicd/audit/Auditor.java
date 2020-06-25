@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.xliic.cicd.audit.JsonParser.Bundled;
 import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.ClientConstants;
 import com.xliic.cicd.audit.client.RemoteApi;
@@ -31,10 +32,6 @@ import com.xliic.cicd.audit.model.api.Maybe;
 import com.xliic.cicd.audit.model.assessment.AssessmentReport;
 import com.xliic.cicd.audit.model.assessment.AssessmentResponse;
 import com.xliic.common.Workspace;
-import com.xliic.openapi.bundler.Bundler;
-import com.xliic.openapi.bundler.Document;
-import com.xliic.openapi.bundler.Parser;
-import com.xliic.openapi.bundler.Serializer;
 
 public class Auditor {
     static int MAX_NAME_LEN = 64;
@@ -145,8 +142,11 @@ public class Auditor {
             Maybe<Boolean> isOpenApi = isOpenApiFile(filename, workspace);
             if (isOpenApi.isOk() && isOpenApi.getResult() == true) {
                 // this is good OpenAPIFile, upload it
-                String json = parseFile(filename, workspace);
-                Maybe<RemoteApi> api = Client.updateApi(apiId, json, apiKey, logger);
+                Bundled bundled = JsonParser.bundle(filename, workspace);
+                Maybe<RemoteApi> api = Client.updateApi(apiId, bundled.json, apiKey, logger);
+                if (api.isOk()) {
+                    api.getResult().setMapping(bundled.mapping);
+                }
                 uploaded.put(filename, api);
             } else if (isOpenApi.isOk() && isOpenApi.getResult() == false) {
                 // not an OpenAPI file, but it is mapped so let's put an error message for it
@@ -184,11 +184,14 @@ public class Auditor {
         if (this.resultCollector != null) {
             report.forEach((filename, summary) -> {
                 String reportUrl = null;
+                com.xliic.openapi.bundler.Mapping mapping = null;
                 if (summary.api.isOk()) {
                     reportUrl = String.format("%s/apis/%s/security-audit-report", platformUrl,
                             summary.api.getResult().apiId);
+                    mapping = summary.api.getResult().mapping;
                 }
-                this.resultCollector.collect(filename, summary.score, summary.report, summary.failures, reportUrl);
+                this.resultCollector.collect(filename, summary.score, summary.report, mapping, summary.failures,
+                        reportUrl);
             });
         }
     }
@@ -290,9 +293,12 @@ public class Auditor {
 
         purgeCollection(collectionId);
         for (String filename : filenames) {
-            String json = parseFile(filename, workspace);
+            Bundled bundled = JsonParser.bundle(filename, workspace);
             String apiName = makeName(filename);
-            Maybe<RemoteApi> api = Client.createApi(collectionId, apiName, json, apiKey, logger);
+            Maybe<RemoteApi> api = Client.createApi(collectionId, apiName, bundled.json, apiKey, logger);
+            if (api.isOk()) {
+                api.getResult().setMapping(bundled.mapping);
+            }
             uploaded.put(filename, api);
         }
 
@@ -318,19 +324,6 @@ public class Auditor {
             return mangled.substring(0, MAX_NAME_LEN);
         }
         return mangled;
-    }
-
-    private String parseFile(String filename, Workspace workspace) throws AuditException {
-        try {
-            Parser parser = new Parser(workspace);
-            Serializer serializer = new Serializer();
-            Bundler bundler = new Bundler(serializer);
-            Document document = parser.parse(workspace.absolutize(filename));
-            bundler.bundle(document);
-            return serializer.serialize(document);
-        } catch (Exception e) {
-            throw new AuditException(String.format("Failed to parse file: %s %s", filename, e), e);
-        }
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD")

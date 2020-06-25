@@ -6,7 +6,9 @@
 package com.xliic.cicd.audit;
 
 import com.xliic.cicd.audit.model.assessment.AssessmentReport;
+import com.xliic.openapi.bundler.Mapping;
 
 public interface ResultCollector {
-    public void collect(String filename, int score, AssessmentReport report, String[] failures, String reportUrl);
+    public void collect(String filename, int score, AssessmentReport report, Mapping mapping, String[] failures,
+            String reportUrl);
 }
