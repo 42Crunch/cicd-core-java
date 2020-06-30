@@ -44,12 +44,17 @@ public class ConfigReader {
 
         // default discovery settings
         if (config.getAudit().getDiscovery() == null) {
-            config.getAudit().setDiscovery(Discovery.defaultDiscovery());
+            config.getAudit().setDiscovery(Discovery.defaultConfig());
         }
 
         // default empty mapping
         if (config.getAudit().getMapping() == null) {
-            config.getAudit().setMapping(new Mapping());
+            config.getAudit().setMapping(Mapping.emptyMapping());
+        }
+
+        // default fail_on section:
+        if (config.getAudit().getFailOn() == null) {
+            config.getAudit().setFailOn(FailOn.defaultConfig());
         }
 
         return config;

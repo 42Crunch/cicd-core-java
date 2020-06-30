@@ -13,6 +13,12 @@ public class FailOn {
     private Severity severity;
     private IssueId issueId;
 
+    public static FailOn defaultConfig() {
+        FailOn failOn = new FailOn();
+        failOn.setInvalidContract(true);
+        return failOn;
+    }
+
     public Severity getSeverity() {
         return severity;
     }

@@ -9,8 +9,9 @@ public class Config {
 
     public static Config createDefault() {
         Audit audit = new Audit();
-        audit.setDiscovery(Discovery.defaultDiscovery());
+        audit.setDiscovery(Discovery.defaultConfig());
         audit.setMapping(Mapping.emptyMapping());
+        audit.setFailOn(FailOn.defaultConfig());
         Config config = new Config();
         config.setAudit(audit);
         return config;

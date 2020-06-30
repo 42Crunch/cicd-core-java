@@ -17,6 +17,10 @@ public class AssessmentReport {
     public String openapiState;
     public Section security;
     public Section data;
+    public Section semanticErrors;
+    public Section validationErrors;
+    public Section warnings;
+
     public String[] index;
 
     public static class Section {

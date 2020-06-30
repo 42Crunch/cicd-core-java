@@ -8,13 +8,13 @@ package com.xliic.cicd.audit.config;
 import java.util.Arrays;
 
 public class Discovery {
-    private static String[] DEFAULT_SEARCH = new String[] { "**/*.json", "**/*.yaml", "**/*.yml", "!node_modules/**",
-            "!tsconfig.json" };
+    private static final String[] DEFAULT_SEARCH = new String[] { "**/*.json", "**/*.yaml", "**/*.yml",
+            "!node_modules/**", "!tsconfig.json" };
 
     private boolean enabled;
     private String[] search;
 
-    public static Discovery defaultDiscovery() {
+    public static Discovery defaultConfig() {
         Discovery discovery = new Discovery();
         discovery.search = DEFAULT_SEARCH;
         return discovery;
