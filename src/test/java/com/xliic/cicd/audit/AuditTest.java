@@ -16,7 +16,7 @@ public class AuditTest {
     void audit() throws IOException, InterruptedException, AuditException {
         AuditorImpl auditor = new AuditorImpl("workspace1");
         auditor.audit();
-        Result result = auditor.results.get("multi-file-petstore/openapi.yaml");
+        Result result = auditor.getResult("multi-file-petstore/openapi.yaml");
         List<String> failures = Arrays.asList(result.failures);
 
         assertEquals(result.score, 18);

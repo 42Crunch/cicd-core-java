@@ -5,10 +5,12 @@
 
 package com.xliic.cicd.audit;
 
+import java.net.URI;
+import java.util.List;
 import java.io.IOException;
 
 public interface OpenApiFinder {
     public void setPatterns(String[] patterns);
 
-    public String[] find() throws AuditException, IOException, InterruptedException;
+    public List<URI> find() throws AuditException, IOException, InterruptedException;
 }

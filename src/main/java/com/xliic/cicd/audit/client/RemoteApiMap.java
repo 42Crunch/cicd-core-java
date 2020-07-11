@@ -5,10 +5,11 @@
 
 package com.xliic.cicd.audit.client;
 
+import java.net.URI;
 import java.util.HashMap;
 
 import com.xliic.cicd.audit.model.api.Maybe;
 
 @SuppressWarnings("serial")
-public class RemoteApiMap extends HashMap<String, Maybe<RemoteApi>> {
+public class RemoteApiMap extends HashMap<URI, Maybe<RemoteApi>> {
 }

@@ -5,10 +5,11 @@
 
 package com.xliic.cicd.audit;
 
+import java.net.URI;
 import java.util.HashMap;
 
 import com.xliic.cicd.audit.model.api.Maybe;
 
 @SuppressWarnings("serial")
-public class DiscoveredOpenApiFiles extends HashMap<String, Maybe<Boolean>> {
+public class DiscoveredOpenApiFiles extends HashMap<URI, Maybe<Boolean>> {
 }

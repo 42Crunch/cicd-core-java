@@ -7,4 +7,8 @@ package com.xliic.cicd.audit;
 
 public interface Logger {
     public void log(String message);
+
+    public void progress(String message);
+
+    public void report(String message);
 }

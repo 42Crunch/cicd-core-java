@@ -2,6 +2,7 @@ package com.xliic.cicd.audit;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,16 +45,16 @@ public class JsonParser {
         return getMapper(false).readValue(json, contentClass);
     }
 
-    public static Bundled bundle(String filename, Workspace workspace) throws AuditException {
+    public static Bundled bundle(URI file, Workspace workspace) throws AuditException {
         try {
             Parser parser = new Parser(workspace);
             Serializer serializer = new Serializer();
             Bundler bundler = new Bundler(serializer);
-            Document document = parser.parse(workspace.absolutize(filename));
+            Document document = parser.parse(file);
             Mapping mapping = bundler.bundle(document);
             return new Bundled(serializer.serialize(document), mapping);
         } catch (Exception e) {
-            throw new AuditException(String.format("Failed to parse file: %s %s", filename, e), e);
+            throw new AuditException(String.format("Failed to parse file: %s %s", file, e), e);
         }
     }
 

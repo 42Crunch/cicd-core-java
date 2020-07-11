@@ -6,11 +6,14 @@
 package com.xliic.cicd.audit;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -65,9 +68,10 @@ public class Auditor {
             throws IOException, InterruptedException, AuditException {
 
         Config config;
-        if (workspace.exists(ConfigReader.CONFIG_FILE_NAME)) {
+        URI configFile = workspace.resolve(ConfigReader.CONFIG_FILE_NAME);
+        if (workspace.exists(configFile)) {
             try {
-                config = ConfigReader.read(workspace.read(ConfigReader.CONFIG_FILE_NAME));
+                config = ConfigReader.read(workspace.read(configFile));
             } catch (final IOException e) {
                 throw new AuditException("Failed to read config file", e);
             }
@@ -87,10 +91,10 @@ public class Auditor {
 
         uploaded.putAll(uploadMappedFiles(workspace, mapping));
 
-        HashMap<String, Summary> report = readAssessment(uploaded, failureConditions);
+        HashMap<URI, Summary> report = readAssessment(workspace, uploaded, failureConditions);
 
         collectResults(report);
-        displayReport(report);
+        displayReport(report, workspace);
 
         int totalFiles = report.size();
         int filesWithFailures = countFilesWithFailures(report);
@@ -113,8 +117,8 @@ public class Auditor {
         DiscoveredOpenApiFiles discovered = discoverOpenApiFiles(workspace, finder, search, mapping);
 
         // collect list of successfully detected OpenAPI files
-        ArrayList<String> openApiFilenames = new ArrayList<String>();
-        for (Entry<String, Maybe<Boolean>> openapi : discovered.entrySet()) {
+        ArrayList<URI> openApiFilenames = new ArrayList<>();
+        for (Entry<URI, Maybe<Boolean>> openapi : discovered.entrySet()) {
             if (openapi.getValue().isOk()) {
                 openApiFilenames.add(openapi.getKey());
             }
@@ -124,7 +128,7 @@ public class Auditor {
         RemoteApiMap remoteApis = uploadFilesToCollection(openApiFilenames, workspace, collectionId);
 
         // add files which failed to parse to the list of errors
-        for (Entry<String, Maybe<Boolean>> openapi : discovered.entrySet()) {
+        for (Entry<URI, Maybe<Boolean>> openapi : discovered.entrySet()) {
             if (openapi.getValue().isError()) {
                 remoteApis.put(openapi.getKey(), new Maybe<>(openapi.getValue().getError()));
             }
@@ -137,40 +141,46 @@ public class Auditor {
         RemoteApiMap uploaded = new RemoteApiMap();
 
         for (Map.Entry<String, String> entry : mapping.entrySet()) {
-            String filename = entry.getKey();
+            URI file = workspace.resolve(entry.getKey());
             String apiId = entry.getValue();
-            Maybe<Boolean> isOpenApi = isOpenApiFile(filename, workspace);
+            Maybe<Boolean> isOpenApi = isOpenApiFile(file, workspace);
             if (isOpenApi.isOk() && isOpenApi.getResult() == true) {
                 // this is good OpenAPIFile, upload it
-                Bundled bundled = JsonParser.bundle(filename, workspace);
+                logger.progress(
+                        String.format("Uploading file for security audit: %s", workspace.relativize(file).getPath()));
+                Bundled bundled = JsonParser.bundle(file, workspace);
                 Maybe<RemoteApi> api = Client.updateApi(apiId, bundled.json, apiKey, logger);
                 if (api.isOk()) {
                     api.getResult().setMapping(bundled.mapping);
                 }
-                uploaded.put(filename, api);
+                uploaded.put(file, api);
             } else if (isOpenApi.isOk() && isOpenApi.getResult() == false) {
                 // not an OpenAPI file, but it is mapped so let's put an error message for it
-                uploaded.put(filename, new Maybe<>(new ErrorMessage(
-                        String.format("Mapped file '%s' API ID '%s' is not an OpenAPI file", filename, apiId))));
+                uploaded.put(file,
+                        new Maybe<>(
+                                new ErrorMessage(String.format("Mapped file '%s' API ID '%s' is not an OpenAPI file",
+                                        workspace.relativize(file).getPath(), apiId))));
             } else {
                 // failed to parse
-                uploaded.put(filename, new Maybe<>(new ErrorMessage(String.format("Mapped file '%s' API ID '%s': %s",
-                        filename, apiId, isOpenApi.getError().getMessage()))));
+                uploaded.put(file, new Maybe<>(new ErrorMessage(String.format("Mapped file '%s' API ID '%s': %s",
+                        workspace.relativize(file).getPath(), apiId, isOpenApi.getError().getMessage()))));
             }
         }
 
         return uploaded;
     }
 
-    private HashMap<String, Summary> readAssessment(RemoteApiMap uploaded, FailureConditions failureConditions)
-            throws IOException {
-        HashMap<String, Summary> report = new HashMap<String, Summary>();
-        for (Map.Entry<String, Maybe<RemoteApi>> entry : uploaded.entrySet()) {
-            String filename = entry.getKey();
+    private HashMap<URI, Summary> readAssessment(Workspace workspace, RemoteApiMap uploaded,
+            FailureConditions failureConditions) throws IOException {
+        HashMap<URI, Summary> report = new HashMap<>();
+        for (Map.Entry<URI, Maybe<RemoteApi>> entry : uploaded.entrySet()) {
+            URI file = entry.getKey();
             Maybe<RemoteApi> api = entry.getValue();
+            logger.progress(
+                    String.format("Retrieving security audit results for: %s", workspace.relativize(file).getPath()));
             Maybe<AssessmentResponse> assessment = Client.readAssessment(api, apiKey, logger);
             Summary summary = checkAssessment(api, assessment, failureConditions);
-            report.put(filename, summary);
+            report.put(file, summary);
         }
         return report;
     }
@@ -180,7 +190,7 @@ public class Auditor {
         return JsonParser.parse(decoded, AssessmentReport.class);
     }
 
-    private void collectResults(Map<String, Summary> report) {
+    private void collectResults(Map<URI, Summary> report) {
         if (this.resultCollector != null) {
             report.forEach((filename, summary) -> {
                 String reportUrl = null;
@@ -196,26 +206,27 @@ public class Auditor {
         }
     }
 
-    private void displayReport(Map<String, Summary> report) {
-        report.forEach((filename, summary) -> {
-            logger.log(String.format("Audited %s, the API score is %d", filename, summary.score));
+    private void displayReport(Map<URI, Summary> report, Workspace workspace) {
+        report.forEach((file, summary) -> {
+            logger.report(String.format("Audited %s, the API score is %d", workspace.relativize(file).getPath(),
+                    summary.score));
             if (summary.failures.length > 0) {
                 for (String failure : summary.failures) {
-                    logger.log("    " + failure);
+                    logger.report("    " + failure);
                 }
             } else {
-                logger.log("    No blocking issues found.");
+                logger.report("    No blocking issues found.");
             }
             if (summary.api.isOk()) {
-                logger.log("    Details:");
-                logger.log(String.format("    %s/apis/%s/security-audit-report", platformUrl,
+                logger.report("    Details:");
+                logger.report(String.format("    %s/apis/%s/security-audit-report", platformUrl,
                         summary.api.getResult().apiId));
             }
-            logger.log("");
+            logger.report("");
         });
     }
 
-    public int countFilesWithFailures(Map<String, Summary> report) {
+    public int countFilesWithFailures(Map<URI, Summary> report) {
         int failures = 0;
         for (Summary summary : report.values()) {
             if (summary.failures.length > 0) {
@@ -229,38 +240,43 @@ public class Auditor {
             Mapping mapping) throws IOException, InterruptedException, AuditException {
         DiscoveredOpenApiFiles discovered = new DiscoveredOpenApiFiles();
 
-        String[] filenames = findOpenapiFiles(workspace, finder, search);
-        logger.log(String.format("Files matching search criteria: %s", String.join(", ", filenames)));
-        for (String filename : filenames) {
-            if (!mapping.containsKey(filename)) {
-                Maybe<Boolean> openapi = isOpenApiFile(filename, workspace);
+        List<URI> files = findOpenapiFiles(workspace, finder, search);
+        String filenames = files.stream().map(file -> workspace.relativize(file).getPath())
+                .collect(Collectors.joining(","));
+        logger.log(String.format("Files matching search criteria: %s", filenames));
+        for (URI file : files) {
+            if (!mapping.containsKey(workspace.relativize(file).getPath())) {
+                Maybe<Boolean> openapi = isOpenApiFile(file, workspace);
                 // put discovered OpenAPI files onto the list of discovered ones
                 // also add there parsing errors
                 if (openapi.isOk() && openapi.getResult() == true || openapi.isError()) {
-                    discovered.put(filename, openapi);
+                    discovered.put(file, openapi);
                 }
             }
         }
-        logger.log(String.format("Discovered OpenAPI files: %s", String.join(", ", discovered.keySet())));
+
+        String discoveredFilenames = discovered.keySet().stream().map(file -> workspace.relativize(file).getPath())
+                .collect(Collectors.joining(","));
+        logger.log(String.format("Discovered OpenAPI files: %s", discoveredFilenames));
 
         return discovered;
     }
 
-    private String[] findOpenapiFiles(Workspace workspace, OpenApiFinder finder, String[] search)
+    private List<URI> findOpenapiFiles(Workspace workspace, OpenApiFinder finder, String[] search)
             throws IOException, InterruptedException, AuditException {
         finder.setPatterns(search);
-        String[] openApiFiles = finder.find();
+        List<URI> openApiFiles = finder.find();
         return openApiFiles;
     }
 
-    private static Maybe<Boolean> isOpenApiFile(String filename, Workspace workspace) {
+    private static Maybe<Boolean> isOpenApiFile(URI file, Workspace workspace) {
         try {
-            OpenApiFile openApiFile = JsonParser.parse(workspace.read(filename), OpenApiFile.class,
-                    filename.toLowerCase().endsWith(".yaml") || filename.toLowerCase().endsWith(".yml"));
+            OpenApiFile openApiFile = JsonParser.parse(workspace.read(file), OpenApiFile.class,
+                    file.getPath().toLowerCase().endsWith(".yaml") || file.getPath().toLowerCase().endsWith(".yml"));
             return new Maybe<Boolean>(openApiFile.isOpenApi());
         } catch (Exception ex) {
-            return new Maybe<Boolean>(
-                    new ErrorMessage(String.format("Filed to parse a file '%s': %s", filename, ex.getMessage())));
+            return new Maybe<Boolean>(new ErrorMessage(String.format("Filed to parse a file '%s': %s",
+                    workspace.relativize(file).getPath(), ex.getMessage())));
         }
     }
 
@@ -287,19 +303,26 @@ public class Auditor {
         return collection.getResult().desc.id;
     }
 
-    private RemoteApiMap uploadFilesToCollection(ArrayList<String> filenames, Workspace workspace, String collectionId)
+    private RemoteApiMap uploadFilesToCollection(ArrayList<URI> files, Workspace workspace, String collectionId)
             throws IOException, AuditException {
         RemoteApiMap uploaded = new RemoteApiMap();
 
         purgeCollection(collectionId);
-        for (String filename : filenames) {
-            Bundled bundled = JsonParser.bundle(filename, workspace);
-            String apiName = makeName(filename);
-            Maybe<RemoteApi> api = Client.createApi(collectionId, apiName, bundled.json, apiKey, logger);
-            if (api.isOk()) {
-                api.getResult().setMapping(bundled.mapping);
+        for (URI file : files) {
+            logger.progress(
+                    String.format("Uploading file for security audit: %s", workspace.relativize(file).getPath()));
+            try {
+                Bundled bundled = JsonParser.bundle(file, workspace);
+                String apiName = makeName(workspace.relativize(file).getPath());
+                Maybe<RemoteApi> api = Client.createApi(collectionId, apiName, bundled.json, apiKey, logger);
+                if (api.isOk()) {
+                    api.getResult().setMapping(bundled.mapping);
+                }
+                uploaded.put(file, api);
+            } catch (AuditException e) {
+                // in case of parsing error during bundling, do not stop audit
+                uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e.getMessage())));
             }
-            uploaded.put(filename, api);
         }
 
         return uploaded;
@@ -318,8 +341,8 @@ public class Auditor {
         }
     }
 
-    private String makeName(String filename) {
-        String mangled = filename.replaceAll("[^A-Za-z0-9_\\-\\.\\ ]", "-");
+    private String makeName(String name) {
+        String mangled = name.replaceAll("[^A-Za-z0-9_\\-\\.\\ ]", "-");
         if (mangled.length() > MAX_NAME_LEN) {
             return mangled.substring(0, MAX_NAME_LEN);
         }

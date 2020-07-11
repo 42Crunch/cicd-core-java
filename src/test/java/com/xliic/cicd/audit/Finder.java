@@ -1,19 +1,18 @@
 package com.xliic.cicd.audit;
 
-import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
-
-import com.xliic.cicd.audit.OpenApiFinder;
+import java.util.List;
 
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.DirectoryScanner;
 import org.apache.tools.ant.types.FileSet;
 
 class Finder implements OpenApiFinder {
-    private File workspace;
+    private WorkspaceImpl workspace;
     private String[] patterns;
 
-    public Finder(File workspace) {
+    public Finder(WorkspaceImpl workspace) {
         this.workspace = workspace;
     }
 
@@ -21,7 +20,7 @@ class Finder implements OpenApiFinder {
         this.patterns = patterns;
     }
 
-    public String[] find() {
+    public List<URI> find() {
 
         ArrayList<String> includes = new ArrayList<String>();
         ArrayList<String> excludes = new ArrayList<String>();
@@ -35,7 +34,7 @@ class Finder implements OpenApiFinder {
         }
 
         FileSet fs = new FileSet();
-        fs.setDir(workspace);
+        fs.setDir(workspace.getDirectory());
         fs.setProject(new Project());
 
         for (String include : includes) {
@@ -48,7 +47,12 @@ class Finder implements OpenApiFinder {
 
         DirectoryScanner ds = fs.getDirectoryScanner(new org.apache.tools.ant.Project());
 
-        return ds.getIncludedFiles();
+        ArrayList<URI> result = new ArrayList<>();
+        for (String filename : ds.getIncludedFiles()) {
+            result.add(workspace.resolve(filename));
+        }
+
+        return result;
 
     }
 
