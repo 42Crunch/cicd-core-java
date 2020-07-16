@@ -13,6 +13,7 @@ import com.xliic.openapi.bundler.Bundler;
 import com.xliic.openapi.bundler.Document;
 import com.xliic.openapi.bundler.Mapping;
 import com.xliic.openapi.bundler.Parser;
+import com.xliic.openapi.bundler.ReferenceResolutionException;
 import com.xliic.openapi.bundler.Serializer;
 
 public class JsonParser {
@@ -45,14 +46,16 @@ public class JsonParser {
         return getMapper(false).readValue(json, contentClass);
     }
 
-    public static Bundled bundle(URI file, Workspace workspace) throws AuditException {
+    public static Bundled bundle(URI file, Workspace workspace) throws AuditException, ReferenceResolutionException {
         try {
             Parser parser = new Parser(workspace);
             Serializer serializer = new Serializer();
-            Bundler bundler = new Bundler(serializer);
+            Bundler bundler = new Bundler(parser, serializer);
             Document document = parser.parse(file);
             Mapping mapping = bundler.bundle(document);
             return new Bundled(serializer.serialize(document), mapping);
+        } catch (ReferenceResolutionException e) {
+            throw e;
         } catch (Exception e) {
             throw new AuditException(String.format("Failed to parse file: %s %s", file, e), e);
         }

@@ -35,6 +35,7 @@ import com.xliic.cicd.audit.model.api.Maybe;
 import com.xliic.cicd.audit.model.assessment.AssessmentReport;
 import com.xliic.cicd.audit.model.assessment.AssessmentResponse;
 import com.xliic.common.Workspace;
+import com.xliic.openapi.bundler.ReferenceResolutionException;
 
 public class Auditor {
     static int MAX_NAME_LEN = 64;
@@ -137,7 +138,7 @@ public class Auditor {
         return remoteApis;
     }
 
-    private RemoteApiMap uploadMappedFiles(Workspace workspace, Mapping mapping) throws IOException, AuditException {
+    private RemoteApiMap uploadMappedFiles(Workspace workspace, Mapping mapping) throws IOException {
         RemoteApiMap uploaded = new RemoteApiMap();
 
         for (Map.Entry<String, String> entry : mapping.entrySet()) {
@@ -148,12 +149,17 @@ public class Auditor {
                 // this is good OpenAPIFile, upload it
                 logger.progress(
                         String.format("Uploading file for security audit: %s", workspace.relativize(file).getPath()));
-                Bundled bundled = JsonParser.bundle(file, workspace);
-                Maybe<RemoteApi> api = Client.updateApi(apiId, bundled.json, apiKey, logger);
-                if (api.isOk()) {
-                    api.getResult().setMapping(bundled.mapping);
+                try {
+                    Bundled bundled = JsonParser.bundle(file, workspace);
+                    Maybe<RemoteApi> api = Client.updateApi(apiId, bundled.json, apiKey, logger);
+                    if (api.isOk()) {
+                        api.getResult().setMapping(bundled.mapping);
+                    }
+                    uploaded.put(file, api);
+                } catch (AuditException | ReferenceResolutionException e) {
+                    // in case of parsing error during bundling, do not stop audit
+                    uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
                 }
-                uploaded.put(file, api);
             } else if (isOpenApi.isOk() && isOpenApi.getResult() == false) {
                 // not an OpenAPI file, but it is mapped so let's put an error message for it
                 uploaded.put(file,
@@ -176,8 +182,7 @@ public class Auditor {
         for (Map.Entry<URI, Maybe<RemoteApi>> entry : uploaded.entrySet()) {
             URI file = entry.getKey();
             Maybe<RemoteApi> api = entry.getValue();
-            logger.progress(
-                    String.format("Retrieving security audit results for: %s", workspace.relativize(file).getPath()));
+            logger.progress(String.format("Retrieving audit results for: %s", workspace.relativize(file).getPath()));
             Maybe<AssessmentResponse> assessment = Client.readAssessment(api, apiKey, logger);
             Summary summary = checkAssessment(api, assessment, failureConditions);
             report.put(file, summary);
@@ -319,9 +324,9 @@ public class Auditor {
                     api.getResult().setMapping(bundled.mapping);
                 }
                 uploaded.put(file, api);
-            } catch (AuditException e) {
+            } catch (AuditException | ReferenceResolutionException e) {
                 // in case of parsing error during bundling, do not stop audit
-                uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e.getMessage())));
+                uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
             }
         }
 
