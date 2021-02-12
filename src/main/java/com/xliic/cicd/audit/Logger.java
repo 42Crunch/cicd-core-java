@@ -15,7 +15,7 @@ public interface Logger {
         public static final int DEBUG = 1;
     }
 
-    public void setLevel(Level level);
+    public void setLevel(int level);
 
     public void fatal(String message);
 

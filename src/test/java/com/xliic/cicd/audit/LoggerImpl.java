@@ -31,7 +31,7 @@ class LoggerImpl implements Logger {
     }
 
     @Override
-    public void setLevel(Level level) {
+    public void setLevel(int level) {
         // ignore levels, log everything
     }
 }
