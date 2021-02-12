@@ -6,9 +6,25 @@
 package com.xliic.cicd.audit;
 
 public interface Logger {
-    public void log(String message);
 
-    public void progress(String message);
+    public interface Level {
+        public static final int FATAL = 5;
+        public static final int ERROR = 4;
+        public static final int WARN = 3;
+        public static final int INFO = 2;
+        public static final int DEBUG = 1;
+    }
 
-    public void report(String message);
+    public void setLevel(Level level);
+
+    public void fatal(String message);
+
+    public void error(String message);
+
+    public void warn(String message);
+
+    public void info(String message);
+
+    public void debug(String message);
+
 }

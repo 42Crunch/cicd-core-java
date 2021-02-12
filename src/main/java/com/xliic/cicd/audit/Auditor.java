@@ -57,11 +57,17 @@ public class Auditor {
 
     public void setProxy(String proxyHost, int proxyPort) {
         Client.setProxy(proxyHost, proxyPort);
-        logger.log(String.format("Using proxy server: %s:%d ", proxyHost, proxyPort));
+        logger.warn(String.format("Using proxy server: %s:%d ", proxyHost, proxyPort));
+    }
+
+    public void setUserAgent(String userAgent) {
+        Client.setUserAgent(userAgent);
+        logger.debug(String.format("Using user agent: %s", userAgent));
     }
 
     public void setPlatformUrl(String platformUrl) {
         this.platformUrl = platformUrl;
+        logger.warn(String.format("Using platform URL: %s ", platformUrl));
         Client.setPlatformUrl(platformUrl);
     }
 
@@ -147,7 +153,7 @@ public class Auditor {
             Maybe<Boolean> isOpenApi = isOpenApiFile(file, workspace);
             if (isOpenApi.isOk() && isOpenApi.getResult() == true) {
                 // this is good OpenAPIFile, upload it
-                logger.progress(
+                logger.info(
                         String.format("Uploading file for security audit: %s", workspace.relativize(file).getPath()));
                 try {
                     Bundled bundled = JsonParser.bundle(file, workspace);
@@ -182,7 +188,7 @@ public class Auditor {
         for (Map.Entry<URI, Maybe<RemoteApi>> entry : uploaded.entrySet()) {
             URI file = entry.getKey();
             Maybe<RemoteApi> api = entry.getValue();
-            logger.progress(String.format("Retrieving audit results for: %s", workspace.relativize(file).getPath()));
+            logger.info(String.format("Retrieving audit results for: %s", workspace.relativize(file).getPath()));
             Maybe<AssessmentResponse> assessment = Client.readAssessment(api, apiKey, logger);
             Summary summary = checkAssessment(api, assessment, failureConditions);
             report.put(file, summary);
@@ -213,21 +219,21 @@ public class Auditor {
 
     private void displayReport(Map<URI, Summary> report, Workspace workspace) {
         report.forEach((file, summary) -> {
-            logger.report(String.format("Audited %s, the API score is %d", workspace.relativize(file).getPath(),
+            logger.error(String.format("Audited %s, the API score is %d", workspace.relativize(file).getPath(),
                     summary.score));
             if (summary.failures.length > 0) {
                 for (String failure : summary.failures) {
-                    logger.report("    " + failure);
+                    logger.error("    " + failure);
                 }
             } else {
-                logger.report("    No blocking issues found.");
+                logger.error("    No blocking issues found.");
             }
             if (summary.api.isOk()) {
-                logger.report("    Details:");
-                logger.report(String.format("    %s/apis/%s/security-audit-report", platformUrl,
+                logger.error("    Details:");
+                logger.error(String.format("    %s/apis/%s/security-audit-report", platformUrl,
                         summary.api.getResult().apiId));
             }
-            logger.report("");
+            logger.error("");
         });
     }
 
@@ -248,7 +254,7 @@ public class Auditor {
         List<URI> files = findOpenapiFiles(workspace, finder, search);
         String filenames = files.stream().map(file -> workspace.relativize(file).getPath())
                 .collect(Collectors.joining(","));
-        logger.log(String.format("Files matching search criteria: %s", filenames));
+        logger.info(String.format("Files matching search criteria: %s", filenames));
         for (URI file : files) {
             if (!mapping.containsKey(workspace.relativize(file).getPath())) {
                 Maybe<Boolean> openapi = isOpenApiFile(file, workspace);
@@ -262,7 +268,7 @@ public class Auditor {
 
         String discoveredFilenames = discovered.keySet().stream().map(file -> workspace.relativize(file).getPath())
                 .collect(Collectors.joining(","));
-        logger.log(String.format("Discovered OpenAPI files: %s", discoveredFilenames));
+        logger.info(String.format("Discovered OpenAPI files: %s", discoveredFilenames));
 
         return discovered;
     }
@@ -314,8 +320,7 @@ public class Auditor {
 
         purgeCollection(collectionId);
         for (URI file : files) {
-            logger.progress(
-                    String.format("Uploading file for security audit: %s", workspace.relativize(file).getPath()));
+            logger.info(String.format("Uploading file for security audit: %s", workspace.relativize(file).getPath()));
             try {
                 Bundled bundled = JsonParser.bundle(file, workspace);
                 String apiName = makeName(workspace.relativize(file).getPath());

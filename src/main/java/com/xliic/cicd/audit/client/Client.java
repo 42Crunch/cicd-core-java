@@ -187,6 +187,7 @@ public class Client {
             try {
                 response = httpClient.execute(request);
                 int status = response.getStatusLine().getStatusCode();
+                this.logger.debug(String.format("%s %s %d", request.getMethod(), request.getURI(), status));
                 if (status >= 200 && status < 300) {
                     HttpEntity entity = response.getEntity();
 
