@@ -35,7 +35,8 @@ import com.xliic.cicd.audit.model.api.Maybe;
 import com.xliic.cicd.audit.model.assessment.AssessmentReport;
 import com.xliic.cicd.audit.model.assessment.AssessmentResponse;
 import com.xliic.common.Workspace;
-import com.xliic.openapi.bundler.ReferenceResolutionException;
+import com.xliic.openapi.bundler.BundlingException;
+import com.xliic.openapi.bundler.ReferenceResolutionFailure;
 
 public class Auditor {
     static int MAX_NAME_LEN = 64;
@@ -162,8 +163,14 @@ public class Auditor {
                         api.getResult().setMapping(bundled.mapping);
                     }
                     uploaded.put(file, api);
-                } catch (AuditException | ReferenceResolutionException e) {
+                } catch (AuditException e) {
                     // in case of parsing error during bundling, do not stop audit
+                    uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
+                } catch (BundlingException e) {
+                    for (ReferenceResolutionFailure failure : e.getFailures()) {
+                        logger.error(String.format("Failed to resolve reference in %s at %s: %s", failure.sourceFile,
+                                failure.sourcePointer, failure.message));
+                    }
                     uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
                 }
             } else if (isOpenApi.isOk() && isOpenApi.getResult() == false) {
@@ -329,8 +336,14 @@ public class Auditor {
                     api.getResult().setMapping(bundled.mapping);
                 }
                 uploaded.put(file, api);
-            } catch (AuditException | ReferenceResolutionException e) {
+            } catch (AuditException e) {
                 // in case of parsing error during bundling, do not stop audit
+                uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
+            } catch (BundlingException e) {
+                for (ReferenceResolutionFailure failure : e.getFailures()) {
+                    logger.error(String.format("Failed to resolve reference in %s at %s: %s", failure.sourceFile,
+                            failure.sourcePointer, failure.message));
+                }
                 uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
             }
         }
