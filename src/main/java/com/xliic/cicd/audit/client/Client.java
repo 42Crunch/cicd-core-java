@@ -180,7 +180,7 @@ public class Client {
         }
 
         Maybe<T> execute() throws IOException {
-            CloseableHttpClient httpClient = HttpClients.createDefault();
+            CloseableHttpClient httpClient = HttpClients.createSystem();
             CloseableHttpResponse response = null;
             configureRequest(request, apiKey, logger);
 
