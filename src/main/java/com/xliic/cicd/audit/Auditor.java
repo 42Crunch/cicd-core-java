@@ -45,6 +45,7 @@ public class Auditor {
     private Secret apiKey;
     private ResultCollector resultCollector;
     private String platformUrl = ClientConstants.PLATFORM_URL;
+    private String collectionId;
 
     public Auditor(OpenApiFinder finder, Logger logger, Secret apiKey) {
         this.finder = finder;
@@ -70,6 +71,10 @@ public class Auditor {
         this.platformUrl = platformUrl;
         logger.warn(String.format("Using platform URL: %s ", platformUrl));
         Client.setPlatformUrl(platformUrl);
+    }
+
+    public String getCollectionId() {
+        return collectionId;
     }
 
     public String audit(Workspace workspace, String collectionName, int minScore)
@@ -131,7 +136,8 @@ public class Auditor {
                 openApiFilenames.add(openapi.getKey());
             }
         }
-        String collectionId = createOrFindCollectionId(makeName(collectionName));
+
+        collectionId = createOrFindCollectionId(makeName(collectionName));
 
         RemoteApiMap remoteApis = uploadFilesToCollection(openApiFilenames, workspace, collectionId);
 
