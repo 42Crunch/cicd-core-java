@@ -166,6 +166,11 @@ public class Client {
                 logger).execute();
     }
 
+    public static Maybe<String> deleteCollection(String collectionId, Secret apiKey, Logger logger) throws IOException {
+        HttpDelete request = new HttpDelete(String.format("%s/api/v1/collections/%s", platformUrl, collectionId));
+        return new ProxyClient<String>(request, apiKey, String.class, logger).execute();
+    }
+
     static class ProxyClient<T> {
         private java.lang.Class<T> contentClass;
         private Logger logger;
