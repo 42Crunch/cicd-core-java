@@ -7,9 +7,15 @@ package com.xliic.cicd.audit.client;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.xliic.cicd.audit.model.api.ApiCollections;
 import com.xliic.cicd.audit.model.api.ErrorMessage;
@@ -47,11 +53,13 @@ public class Client {
     private String platformUrl;
     private Secret apiKey;
     private Logger logger;
+    private ObjectMapper mapper;
 
     public Client(Secret apiKey, String platformUrl, Logger logger) {
         this.apiKey = apiKey;
         this.platformUrl = platformUrl;
         this.logger = logger;
+        this.mapper = new ObjectMapper();
     }
 
     public void setUserAgent(String userAgent) {
@@ -93,8 +101,7 @@ public class Client {
         // update the api
         HttpPut request = new HttpPut(platformUrl + "/api/v1/apis/" + apiId);
         String encodedJson = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
-        request.setEntity(
-                new StringEntity(String.format("{\"specfile\": \"%s\"}", encodedJson), ContentType.APPLICATION_JSON));
+        request.setEntity(jsonEntity(new String[][] { { "specfile", encodedJson } }));
         Maybe<String> result = new ProxyClient<String>(request, apiKey, String.class, logger).execute();
         if (result.isError()) {
             return new Maybe<RemoteApi>(result.getError());
@@ -158,18 +165,15 @@ public class Client {
     }
 
     public Maybe<TechnicalCollection> readTechnicalCollection(String name) throws IOException {
-        // FIXME need proper JSON encoder to escsape name value
         HttpPost request = new HttpPost(platformUrl + "/api/v1/collections/technicalName");
-        request.setEntity(
-                new StringEntity(String.format("{\"technicalName\": \"%s\"}", name), ContentType.APPLICATION_JSON));
+        request.setEntity(jsonEntity(new String[][] { { "technicalName", name } }));
         return new ProxyClient<TechnicalCollection>(request, apiKey, TechnicalCollection.class, logger).execute();
     }
 
     public Maybe<ApiCollections.ApiCollection> createTechnicalCollection(String name) throws IOException {
         HttpPost request = new HttpPost(platformUrl + "/api/v1/collections");
-        request.setEntity(new StringEntity(
-                String.format("{\"technicalName\": \"%s\", \"name\": \"%s\", \"source\": \"default\"}", name, name),
-                ContentType.APPLICATION_JSON));
+        request.setEntity(
+                jsonEntity(new String[][] { { "technicalName", name }, { "name", name }, { "source", "default" } }));
         return new ProxyClient<ApiCollections.ApiCollection>(request, apiKey, ApiCollections.ApiCollection.class,
                 logger).execute();
 
@@ -178,6 +182,16 @@ public class Client {
     public Maybe<String> deleteCollection(String collectionId) throws IOException {
         HttpDelete request = new HttpDelete(String.format("%s/api/v1/collections/%s", platformUrl, collectionId));
         return new ProxyClient<String>(request, apiKey, String.class, logger).execute();
+    }
+
+    private StringEntity jsonEntity(String[][] value) throws UnsupportedCharsetException, JsonProcessingException {
+        Map<String, String> map = new HashMap<>();
+        for (int i = 0; i < value.length; i++) {
+            String[] entry = value[i];
+            map.put(entry[0], entry[1]);
+        }
+
+        return new StringEntity(mapper.writeValueAsString(map), ContentType.APPLICATION_JSON);
     }
 
     class ProxyClient<T> {
