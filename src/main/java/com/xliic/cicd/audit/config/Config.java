@@ -7,14 +7,12 @@ package com.xliic.cicd.audit.config;
 
 public class Config {
 
-    public static Config createDefault() {
-        Audit audit = new Audit();
-        audit.setDiscovery(Discovery.defaultConfig());
-        audit.setMapping(Mapping.emptyMapping());
-        audit.setFailOn(FailOn.defaultConfig());
-        Config config = new Config();
-        config.setAudit(audit);
-        return config;
+    public static AuditConfig createDefault() {
+        AuditConfig auditConfig = new AuditConfig();
+        auditConfig.setDiscovery(Discovery.defaultConfig());
+        auditConfig.setMapping(Mapping.emptyMapping());
+        auditConfig.setFailOn(FailOn.defaultConfig());
+        return auditConfig;
     }
 
     private Audit audit;
@@ -26,4 +24,5 @@ public class Config {
     public void setAudit(Audit audit) {
         this.audit = audit;
     }
+
 }

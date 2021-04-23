@@ -42,20 +42,22 @@ public class ConfigReader {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         Config config = mapper.readValue(data, Config.class);
 
-        // default discovery settings
-        if (config.getAudit().getDiscovery() == null) {
-            config.getAudit().setDiscovery(Discovery.defaultConfig());
-        }
+        // FIXME do defaults somewhere
 
-        // default empty mapping
-        if (config.getAudit().getMapping() == null) {
-            config.getAudit().setMapping(Mapping.emptyMapping());
-        }
+        // // default discovery settings
+        // if (config.getAudit().getDiscovery() == null) {
+        // config.getAudit().setDiscovery(Discovery.defaultConfig());
+        // }
 
-        // default fail_on section:
-        if (config.getAudit().getFailOn() == null) {
-            config.getAudit().setFailOn(FailOn.defaultConfig());
-        }
+        // // default empty mapping
+        // if (config.getAudit().getMapping() == null) {
+        // config.getAudit().setMapping(Mapping.emptyMapping());
+        // }
+
+        // // default fail_on section:
+        // if (config.getAudit().getFailOn() == null) {
+        // config.getAudit().setFailOn(FailOn.defaultConfig());
+        // }
 
         return config;
     }

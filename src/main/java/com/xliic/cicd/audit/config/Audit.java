@@ -5,35 +5,23 @@
 
 package com.xliic.cicd.audit.config;
 
-import com.fasterxml.jackson.annotation.JsonSetter;
-
 public class Audit {
-    private Mapping mapping;
-    private Discovery discovery;
-    private FailOn failOn;
+    private Branches branches;
+    private Tags tags;
 
-    public Mapping getMapping() {
-        return this.mapping;
+    public Branches getBranches() {
+        return this.branches;
     }
 
-    public void setMapping(Mapping mapping) {
-        this.mapping = mapping;
+    public void setBranches(Branches branches) {
+        this.branches = branches;
     }
 
-    public Discovery getDiscovery() {
-        return this.discovery;
+    public Tags getTags() {
+        return this.tags;
     }
 
-    public void setDiscovery(Discovery discovery) {
-        this.discovery = discovery;
-    }
-
-    public FailOn getFailOn() {
-        return this.failOn;
-    }
-
-    @JsonSetter("fail_on")
-    public void setFailOn(FailOn failOn) {
-        this.failOn = failOn;
+    public void setTags(Tags tags) {
+        this.tags = tags;
     }
 }

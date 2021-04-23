@@ -10,6 +10,5 @@ import java.util.HashMap;
 
 import com.xliic.cicd.audit.model.api.Maybe;
 
-@SuppressWarnings("serial")
 public class RemoteApiMap extends HashMap<URI, Maybe<RemoteApi>> {
 }

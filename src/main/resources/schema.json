@@ -3,16 +3,18 @@
   "type": "object",
   "properties": {
     "audit": {
+      "type": "object",
       "properties": {
-        "fail_on": { "$ref": "#/definitions/failureConditions" },
-        "mapping": { "$ref": "#/definitions/mapping" },
-        "discovery": {
-          "oneOf": [
-            { "$ref": "#/definitions/discovery" },
-            { "$ref": "#/definitions/discoveryDisabled" }
-          ]
+        "branches": {
+          "additionalProperties": {
+            "$ref": "#/definitions/config"
+          }
+        },
+        "tags": {
+          "additionalProperties": {
+            "$ref": "#/definitions/config"
+          }
         }
-
       },
       "additionalProperties": false
     }
@@ -20,9 +22,27 @@
   "additionalProperties": false,
   "required": ["audit"],
   "definitions": {
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fail_on": { "$ref": "#/definitions/failureConditions" },
+        "extensions": { "$ref": "#/definitions/extensions" },
+        "mapping": { "$ref": "#/definitions/mapping" },
+        "discovery": {
+          "oneOf": [
+            { "$ref": "#/definitions/discovery" },
+            { "type": "boolean" }
+          ]
+        }
+      }
+    },
     "failureConditions": {
       "type": "object",
       "properties": {
+        "unmapped_files": {
+          "type": "boolean"
+        },
         "invalid_contract": {
           "type": "boolean"
         },
@@ -40,20 +60,31 @@
           ]
         },
         "score": {
-          "type": "object",
-          "properties": {
-            "data": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 70
-            },
-            "security": {
-              "type": "integer",
-              "minimum": 0,
-              "maximum": 30
-            }
-          },
-          "additionalProperties": false
+          "oneOf": [
+            { "$ref": "#/definitions/scoreOverall" },
+            { "$ref": "#/definitions/scorePerCategory" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "scoreOverall": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "scorePerCategory": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 70
+        },
+        "security": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
         }
       },
       "additionalProperties": false
@@ -83,16 +114,25 @@
       },
       "additionalProperties": false
     },
-    "discoveryDisabled": {
-      "type": "boolean",
-      "enum": [false]
-    },
     "mapping": {
       "type": "object",
       "patternProperties": {
         ".+": {
-          "type":"string",
+          "type": "string",
           "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "properties": {
+        "skip_issues": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

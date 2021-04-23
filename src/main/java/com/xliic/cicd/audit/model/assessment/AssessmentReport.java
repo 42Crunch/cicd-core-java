@@ -28,7 +28,6 @@ public class AssessmentReport {
         public Issues issues;
     }
 
-    @SuppressWarnings("serial")
     public static class Issues extends HashMap<String, Issue> {
         @JsonAnySetter
         public void set(String id, Issue issue) {

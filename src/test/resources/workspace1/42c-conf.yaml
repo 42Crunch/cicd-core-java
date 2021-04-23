@@ -1,28 +1,30 @@
 audit:
-  # map filenames to IDs of already existing APIs
-  #mapping:
-  #  foo/bar/petstore-v3.json: a193b82d-5833-47f8-81d2-cfc4fe175914
+  branches:
+    master:
+      # map filenames to IDs of already existing APIs
+      #mapping:
+      #  foo/bar/petstore-v3.json: a193b82d-5833-47f8-81d2-cfc4fe175914
 
-  # find OpenAPI files in files with .json .yml .yaml extensions,
-  # exclude node_modules/ directory from the search
-  discovery:
-    search:
-      - '**/*.json'
-      - '**/*.yaml'
-      - '**/*.yml'
-      - '!node_modules/**'
+      # find OpenAPI files in files with .json .yml .yaml extensions,
+      # exclude node_modules/ directory from the search
+      discovery:
+        search:
+          - '**/*.json'
+          - '**/*.yaml'
+          - '**/*.yml'
+          - '!node_modules/**'
 
-  # in addition to min score specified in the Azure Pipelines
-  # check for the following issues
-  fail_on:
-    # fail if OpenAPI file is not 'valid' OpenAPI as per audit report
-    invalid_contract: true
+      # in addition to min score specified in the Azure Pipelines
+      # check for the following issues
+      fail_on:
+        # fail if OpenAPI file is not 'valid' OpenAPI as per audit report
+        invalid_contract: true
 
-    # fail any issues with severity of 'medium' or higher are detected.
-    # possible severity levels: critical, high, medium, low, info
-    severity: medium
+        # fail any issues with severity of 'medium' or higher are detected.
+        # possible severity levels: critical, high, medium, low, info
+        severity: medium
 
-    # fail if any of the listed issue IDs are detected
-    issue_id:
-      - v3-global-http-clear
-      - v3-response-schema-undefined
+        # fail if any of the listed issue IDs are detected
+        issue_id:
+          - v3-global-http-clear
+          - v3-response-schema-undefined

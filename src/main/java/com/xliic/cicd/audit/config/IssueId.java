@@ -8,7 +8,6 @@ package com.xliic.cicd.audit.config;
 import java.util.ArrayList;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
-@SuppressWarnings("serial")
 public class IssueId extends ArrayList<String> {
     @JsonAnySetter
     public void set(String id) {

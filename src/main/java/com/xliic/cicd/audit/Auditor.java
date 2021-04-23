@@ -22,6 +22,7 @@ import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.ClientConstants;
 import com.xliic.cicd.audit.client.RemoteApi;
 import com.xliic.cicd.audit.client.RemoteApiMap;
+import com.xliic.cicd.audit.config.AuditConfig;
 import com.xliic.cicd.audit.config.Config;
 import com.xliic.cicd.audit.config.ConfigReader;
 import com.xliic.cicd.audit.config.Discovery;
@@ -80,21 +81,22 @@ public class Auditor {
     public String audit(Workspace workspace, String collectionName, int minScore)
             throws IOException, InterruptedException, AuditException {
 
-        Config config;
+        AuditConfig config = null;
         URI configFile = workspace.resolve(ConfigReader.CONFIG_FILE_NAME);
         if (workspace.exists(configFile)) {
             try {
-                config = ConfigReader.read(workspace.read(configFile));
+                config = ConfigReader.read(workspace.read(configFile)).getAudit().getBranches().get("master");
             } catch (final IOException e) {
                 throw new AuditException("Failed to read config file", e);
             }
         } else {
-            config = Config.createDefault();
+            // FIXME default
+            // config = Config.createDefault();
         }
 
-        final Discovery discovery = config.getAudit().getDiscovery();
-        final Mapping mapping = config.getAudit().getMapping();
-        final FailureConditions failureConditions = new FailureConditions(minScore, config.getAudit().getFailOn());
+        final Discovery discovery = config.getDiscovery();
+        final Mapping mapping = config.getMapping();
+        final FailureConditions failureConditions = new FailureConditions(minScore, config.getFailOn());
 
         final RemoteApiMap uploaded = new RemoteApiMap();
         // discover and upload apis
