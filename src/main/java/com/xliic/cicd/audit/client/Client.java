@@ -14,6 +14,7 @@ import java.util.Base64;
 import com.xliic.cicd.audit.model.api.ApiCollections;
 import com.xliic.cicd.audit.model.api.ErrorMessage;
 import com.xliic.cicd.audit.model.api.Maybe;
+import com.xliic.cicd.audit.model.api.TechnicalCollection;
 import com.xliic.cicd.audit.JsonParser;
 import com.xliic.cicd.audit.Logger;
 import com.xliic.cicd.audit.Secret;
@@ -156,17 +157,22 @@ public class Client {
         return new ProxyClient<ApiCollection>(request, apiKey, ApiCollection.class, logger).execute();
     }
 
-    public Maybe<ApiCollections> listCollections() throws IOException {
-        HttpGet request = new HttpGet(platformUrl + "/api/v1/collections");
-        return new ProxyClient<ApiCollections>(request, apiKey, ApiCollections.class, logger).execute();
+    public Maybe<TechnicalCollection> readTechnicalCollection(String name) throws IOException {
+        // FIXME need proper JSON encoder to escsape name value
+        HttpPost request = new HttpPost(platformUrl + "/api/v1/collections/technicalName");
+        request.setEntity(
+                new StringEntity(String.format("{\"technicalName\": \"%s\"}", name), ContentType.APPLICATION_JSON));
+        return new ProxyClient<TechnicalCollection>(request, apiKey, TechnicalCollection.class, logger).execute();
     }
 
-    public Maybe<ApiCollections.ApiCollection> createCollection(String collectionName) throws IOException {
+    public Maybe<ApiCollections.ApiCollection> createTechnicalCollection(String name) throws IOException {
         HttpPost request = new HttpPost(platformUrl + "/api/v1/collections");
-        request.setEntity(new StringEntity(String.format("{\"name\": \"%s\", \"isShared\": false}", collectionName),
+        request.setEntity(new StringEntity(
+                String.format("{\"technicalName\": \"%s\", \"name\": \"%s\", \"source\": \"default\"}", name, name),
                 ContentType.APPLICATION_JSON));
         return new ProxyClient<ApiCollections.ApiCollection>(request, apiKey, ApiCollections.ApiCollection.class,
                 logger).execute();
+
     }
 
     public Maybe<String> deleteCollection(String collectionId) throws IOException {
@@ -212,19 +218,21 @@ public class Client {
                 if (status == 409 && responseBody.contains("limit reached")) {
                     return new Maybe<T>(new ErrorMessage(String.format(
                             "You have reached your maximum number of APIs. Please sign into %s and upgrade your account.",
-                            platformUrl)));
+                            platformUrl), status));
                 } else if (status == 403) {
                     return new Maybe<T>(new ErrorMessage(
                             "Received 'Forbidden 403' response. Check that your API IDs are correct and API Token has required permissions: "
-                                    + responseBody));
+                                    + responseBody,
+                            status));
                 } else if (status == 401) {
                     return new Maybe<T>(new ErrorMessage(
                             "Received 'Unauthorized 401' response. Check that the API token is correct: "
-                                    + responseBody));
+                                    + responseBody,
+                            status));
                 }
                 return new Maybe<T>(
                         new ErrorMessage(String.format("HTTP Request: %s %s failed with unexpected status code %s",
-                                request.getMethod(), request.getURI(), status)));
+                                request.getMethod(), request.getURI(), status), status));
             } finally {
                 if (response != null) {
                     response.close();

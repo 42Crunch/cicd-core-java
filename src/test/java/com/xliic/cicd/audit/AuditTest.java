@@ -7,16 +7,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import com.xliic.cicd.audit.ResultCollectorImpl.Result;
-
 import org.junit.jupiter.api.Test;
 
 public class AuditTest {
     @Test
     void audit() throws IOException, InterruptedException, AuditException {
         AuditorImpl auditor = new AuditorImpl("workspace1");
-        auditor.audit();
-        Result result = auditor.getResult("multi-file-petstore/openapi.yaml");
+        auditor.audit("master");
+        AuditResult result = auditor.getResult("multi-file-petstore/openapi.yaml");
         List<String> failures = Arrays.asList(result.failures);
 
         assertEquals(result.score, 17);

@@ -49,11 +49,6 @@ public class ConfigReader {
         // config.getAudit().setDiscovery(Discovery.defaultConfig());
         // }
 
-        // // default empty mapping
-        // if (config.getAudit().getMapping() == null) {
-        // config.getAudit().setMapping(Mapping.emptyMapping());
-        // }
-
         // // default fail_on section:
         // if (config.getAudit().getFailOn() == null) {
         // config.getAudit().setFailOn(FailOn.defaultConfig());

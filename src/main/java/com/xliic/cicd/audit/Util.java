@@ -33,4 +33,9 @@ public class Util {
         }
         return mangled;
     }
+
+    static String makeTechnicalCollectionName(String repoName, String branchName) {
+        // FIXME check for max name len
+        return String.format("%s::%s", repoName, branchName);
+    }
 }

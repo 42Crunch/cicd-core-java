@@ -2,18 +2,14 @@ package com.xliic.cicd.audit;
 
 import java.io.IOException;
 
-import com.xliic.cicd.audit.ResultCollectorImpl.Result;
-
 class AuditorImpl {
-    ResultCollectorImpl results;
     LoggerImpl logger;
     private Auditor auditor;
-    private String collectionName = "tests-cicd-core-java";
     private int score = 75;
     private WorkspaceImpl workspace;
+    private AuditResults results;
 
     AuditorImpl(String dirname) throws IOException {
-        results = new ResultCollectorImpl();
         logger = new LoggerImpl();
         workspace = new WorkspaceImpl(dirname);
         Finder finder = new Finder(workspace);
@@ -27,11 +23,12 @@ class AuditorImpl {
         this.score = score;
     }
 
-    AuditResults audit() throws IOException, InterruptedException, AuditException {
-        return auditor.audit(workspace, collectionName, score);
+    AuditResults audit(String branch) throws IOException, InterruptedException, AuditException {
+        this.results = auditor.audit(workspace, "test-repo", branch, score);
+        return this.results;
     }
 
-    public Result getResult(String filename) {
-        return results.get(workspace.resolve(filename));
+    public AuditResult getResult(String filename) {
+        return results.summary.get(workspace.resolve(filename));
     }
 }

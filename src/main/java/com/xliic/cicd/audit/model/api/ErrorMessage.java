@@ -8,9 +8,15 @@ package com.xliic.cicd.audit.model.api;
 public class ErrorMessage {
     private String message;
     private Exception exception;
+    private int httpStatus;
 
     public ErrorMessage(String message) {
         this.message = message;
+    }
+
+    public ErrorMessage(String message, int httpStatus) {
+        this.message = message;
+        this.httpStatus = httpStatus;
     }
 
     public ErrorMessage(Exception exception) {
@@ -24,5 +30,9 @@ public class ErrorMessage {
 
     public Exception getException() {
         return this.exception;
+    }
+
+    public int getHttpStatus() {
+        return this.httpStatus;
     }
 }

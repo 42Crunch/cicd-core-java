@@ -25,8 +25,9 @@ public class MappingAuditor {
     private Logger logger;
     private Client client;
 
-    public MappingAuditor(Client client) {
+    public MappingAuditor(Client client, Logger logger) {
         this.client = client;
+        this.logger = logger;
     }
 
     RemoteApiMap audit(Workspace workspace, Mapping mapping) throws IOException {

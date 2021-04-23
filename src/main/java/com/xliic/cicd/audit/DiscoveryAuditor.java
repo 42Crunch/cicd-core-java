@@ -22,6 +22,7 @@ import com.xliic.cicd.audit.model.api.ApiCollection;
 import com.xliic.cicd.audit.model.api.ApiCollections;
 import com.xliic.cicd.audit.model.api.ErrorMessage;
 import com.xliic.cicd.audit.model.api.Maybe;
+import com.xliic.cicd.audit.model.api.TechnicalCollection;
 import com.xliic.common.Workspace;
 import com.xliic.openapi.bundler.BundlingException;
 import com.xliic.openapi.bundler.ReferenceResolutionFailure;
@@ -31,11 +32,12 @@ public class DiscoveryAuditor {
     private Logger logger;
     private Client client;
 
-    public DiscoveryAuditor(Client client) {
+    public DiscoveryAuditor(Client client, Logger logger) {
         this.client = client;
+        this.logger = logger;
     }
 
-    RemoteApiMap audit(Workspace workspace, OpenApiFinder finder, String collectionName, String[] search,
+    RemoteApiMap audit(Workspace workspace, OpenApiFinder finder, String repoName, String branchName, String[] search,
             Mapping mapping) throws IOException, InterruptedException, AuditException {
         DiscoveredOpenApiFiles discovered = discoverOpenApiFiles(workspace, finder, search, mapping);
 
@@ -47,7 +49,7 @@ public class DiscoveryAuditor {
             }
         }
 
-        collectionId = createOrFindCollectionId(Util.makeName(collectionName));
+        collectionId = createOrFindCollectionId(Util.makeTechnicalCollectionName(repoName, branchName));
 
         RemoteApiMap remoteApis = uploadFilesToCollection(openApiFilenames, workspace, collectionId);
 
@@ -135,22 +137,19 @@ public class DiscoveryAuditor {
 
         // check existing collections to see if collection with collectionName already
         // exists
-        Maybe<ApiCollections> collections = client.listCollections();
-        if (collections.isError()) {
-            throw new AuditException("Unable to list collection: " + collections.getError().getMessage());
-        }
-        for (ApiCollections.ApiCollection collection : collections.getResult().list) {
-            if (collection.desc.name.equals(collectionName)) {
-                return collection.desc.id;
+        Maybe<TechnicalCollection> collection = client.readTechnicalCollection(collectionName);
+        if (!collection.isError()) {
+            return collection.getResult().id;
+        } else {
+            if (collection.getError().getHttpStatus() == 404) {
+                Maybe<ApiCollections.ApiCollection> cc = client.createTechnicalCollection(collectionName);
+                if (cc.isError()) {
+                    throw new AuditException("Unable to create collection: " + collection.getError().getMessage());
+                }
+                return cc.getResult().desc.id;
             }
+            throw new AuditException("Unable to list collection: " + collection.getError().getMessage());
         }
-
-        // no collection collectionName found, create a new one
-        Maybe<ApiCollections.ApiCollection> collection = client.createCollection(collectionName);
-        if (collection.isError()) {
-            throw new AuditException("Unable to create collection: " + collection.getError().getMessage());
-        }
-        return collection.getResult().desc.id;
     }
 
     private List<URI> findOpenapiFiles(Workspace workspace, OpenApiFinder finder, String[] search)

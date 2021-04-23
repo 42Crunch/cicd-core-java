@@ -18,6 +18,7 @@ import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.RemoteApi;
 import com.xliic.cicd.audit.client.RemoteApiMap;
 import com.xliic.cicd.audit.config.AuditConfig;
+import com.xliic.cicd.audit.config.Config;
 import com.xliic.cicd.audit.config.ConfigReader;
 import com.xliic.cicd.audit.config.Discovery;
 import com.xliic.cicd.audit.config.Mapping;
@@ -54,14 +55,14 @@ public class Auditor {
         this.client.setPlatformUrl(platformUrl);
     }
 
-    public AuditResults audit(Workspace workspace, String collectionName, int minScore)
+    public AuditResults audit(Workspace workspace, String repoName, String branchName, int minScore)
             throws IOException, InterruptedException, AuditException {
 
-        AuditConfig config = null;
+        Config yamlConfig = null;
         URI configFile = workspace.resolve(ConfigReader.CONFIG_FILE_NAME);
         if (workspace.exists(configFile)) {
             try {
-                config = ConfigReader.read(workspace.read(configFile)).getAudit().getBranches().get("master");
+                yamlConfig = ConfigReader.read(workspace.read(configFile));
             } catch (final IOException e) {
                 throw new AuditException("Failed to read config file", e);
             }
@@ -70,17 +71,20 @@ public class Auditor {
             // config = Config.createDefault();
         }
 
+        AuditConfig config = populateDefaults(yamlConfig, branchName);
+
         final Discovery discovery = config.getDiscovery();
         final Mapping mapping = config.getMapping();
         final FailureConditions failureConditions = new FailureConditions(minScore, config.getFailOn());
 
-        DiscoveryAuditor discoveryAuditor = new DiscoveryAuditor(this.client);
-        MappingAuditor mappingAuditor = new MappingAuditor(this.client);
+        DiscoveryAuditor discoveryAuditor = new DiscoveryAuditor(this.client, this.logger);
+        MappingAuditor mappingAuditor = new MappingAuditor(this.client, this.logger);
 
         final RemoteApiMap uploaded = new RemoteApiMap();
         // discover and upload apis
         if (discovery.isEnabled()) {
-            uploaded.putAll(discoveryAuditor.audit(workspace, finder, collectionName, discovery.getSearch(), mapping));
+            uploaded.putAll(
+                    discoveryAuditor.audit(workspace, finder, repoName, branchName, discovery.getSearch(), mapping));
 
         }
 
@@ -89,6 +93,16 @@ public class Auditor {
         HashMap<URI, Summary> report = readAssessment(workspace, uploaded, failureConditions);
 
         return collectResults(report);
+    }
+
+    private AuditConfig populateDefaults(Config yamlConfig, String branch) {
+        AuditConfig c = yamlConfig.getAudit().getBranches().get(branch);
+
+        // default empty mapping
+        if (c.getMapping() == null) {
+            c.setMapping(Mapping.emptyMapping());
+        }
+        return c;
     }
 
     public void displayReport(AuditResults report, Workspace workspace) {
