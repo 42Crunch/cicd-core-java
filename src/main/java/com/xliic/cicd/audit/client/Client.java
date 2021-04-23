@@ -75,15 +75,12 @@ public class Client {
         this.platformUrl = platformUrl;
     }
 
-    public Maybe<RemoteApi> createApi(String collectionId, String name, String json) throws IOException {
-        HttpPost request = new HttpPost(platformUrl + "/api/v1/apis");
-
-        HttpEntity data = MultipartEntityBuilder
-                .create().setMode(HttpMultipartMode.BROWSER_COMPATIBLE).addBinaryBody("specfile",
-                        json.getBytes(StandardCharsets.UTF_8), ContentType.APPLICATION_JSON, "swagger.json")
-                .addTextBody("name", name).addTextBody("cid", collectionId).build();
-        request.setEntity(data);
-
+    public Maybe<RemoteApi> createTechnicalApi(String collectionId, String technicalName, String name, String json)
+            throws IOException {
+        String encodedJson = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+        HttpPost request = new HttpPost(platformUrl + "/api/v2/apis");
+        request.setEntity(
+                jsonEntity(new String[][] { { "cid", collectionId }, { "name", name }, { "specfile", encodedJson } }));
         Maybe<Api> api = new ProxyClient<Api>(request, apiKey, Api.class, logger).execute();
         if (api.isError()) {
             return new Maybe<RemoteApi>(api.getError());
@@ -112,6 +109,11 @@ public class Client {
     public Maybe<String> deleteApi(String apiId) throws IOException {
         HttpDelete request = new HttpDelete(String.format("%s/api/v1/apis/%s", platformUrl, apiId));
         return new ProxyClient<String>(request, apiKey, String.class, logger).execute();
+    }
+
+    public Maybe<ApiCollection> listApis(String collectionId) throws IOException {
+        HttpGet request = new HttpGet(String.format("%s/api/v1/collections/%s/apis", platformUrl, collectionId));
+        return new ProxyClient<ApiCollection>(request, apiKey, ApiCollection.class, logger).execute();
     }
 
     public Maybe<AssessmentResponse> readAssessment(Maybe<RemoteApi> api) throws ClientProtocolException, IOException {
@@ -157,11 +159,6 @@ public class Client {
         }
         return new Maybe<ApiStatus>(
                 new ApiStatus(result.getResult().assessment.isProcessed, result.getResult().assessment.last));
-    }
-
-    public Maybe<ApiCollection> listCollection(String collectionId) throws IOException {
-        HttpGet request = new HttpGet(String.format("%s/api/v1/collections/%s/apis", platformUrl, collectionId));
-        return new ProxyClient<ApiCollection>(request, apiKey, ApiCollection.class, logger).execute();
     }
 
     public Maybe<TechnicalCollection> readTechnicalCollection(String name) throws IOException {

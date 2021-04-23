@@ -77,7 +77,7 @@ public class Auditor {
         final Mapping mapping = config.getMapping();
         final FailureConditions failureConditions = new FailureConditions(minScore, config.getFailOn());
 
-        DiscoveryAuditor discoveryAuditor = new DiscoveryAuditor(this.client, this.logger);
+        DiscoveryAuditor discoveryAuditor = new DiscoveryAuditor(workspace, this.client, this.logger);
         MappingAuditor mappingAuditor = new MappingAuditor(this.client, this.logger);
 
         final RemoteApiMap uploaded = new RemoteApiMap();

@@ -8,10 +8,13 @@ package com.xliic.cicd.audit;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.xliic.cicd.audit.JsonParser.Bundled;
 import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.RemoteApi;
@@ -31,10 +34,12 @@ public class DiscoveryAuditor {
     private String collectionId;
     private Logger logger;
     private Client client;
+    private Workspace workspace;
 
-    public DiscoveryAuditor(Client client, Logger logger) {
+    public DiscoveryAuditor(Workspace workspace, Client client, Logger logger) {
         this.client = client;
         this.logger = logger;
+        this.workspace = workspace;
     }
 
     RemoteApiMap audit(Workspace workspace, OpenApiFinder finder, String repoName, String branchName, String[] search,
@@ -93,43 +98,122 @@ public class DiscoveryAuditor {
             throws IOException, AuditException {
         RemoteApiMap uploaded = new RemoteApiMap();
 
-        purgeCollection(collectionId);
-        for (URI file : files) {
-            logger.info(String.format("Uploading file for security audit: %s", workspace.relativize(file).getPath()));
-            try {
-                Bundled bundled = JsonParser.bundle(file, workspace);
-                String apiName = Util.makeName(workspace.relativize(file).getPath());
-                Maybe<RemoteApi> api = client.createApi(collectionId, apiName, bundled.json);
-                if (api.isOk()) {
-                    api.getResult().setMapping(bundled.mapping);
-                }
-                uploaded.put(file, api);
-            } catch (AuditException e) {
-                // in case of parsing error during bundling, do not stop audit
-                uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
-            } catch (BundlingException e) {
-                for (ReferenceResolutionFailure failure : e.getFailures()) {
-                    logger.error(String.format("Failed to resolve reference in %s at %s: %s", failure.sourceFile,
-                            failure.sourcePointer, failure.message));
-                }
-                uploaded.put(file, new Maybe<RemoteApi>(new ErrorMessage(e)));
+        Maybe<ApiCollection> apis = client.listApis(collectionId);
+        if (apis.isError()) {
+            throw new AuditException("Unable to list collection: " + apis.getError().getMessage());
+
+        }
+
+        List<ApiAction> actions = createApiActions(apis.getResult(), files);
+        for (ApiAction action : actions) {
+            switch (action.action) {
+            case ApiAction.DELETE:
+                deleteApi(action.apiId);
+                break;
+            case ApiAction.CREATE:
+                uploaded.put(action.file, createApi(action.file));
+                break;
+            case ApiAction.UPDATE:
+                uploaded.put(action.file, updateApi(action.file, action.apiId));
+                break;
             }
         }
 
         return uploaded;
     }
 
-    private void purgeCollection(String collectionId) throws IOException, AuditException {
-        Maybe<ApiCollection> collection = client.listCollection(collectionId);
-        if (collection.isError()) {
-            throw new AuditException("Unable to read collection: " + collection.getError().getMessage());
+    private void deleteApi(String apiId) throws IOException, AuditException {
+        logger.info(String.format("Removing api from collection, because it's no longer present: %s", apiId));
+        Maybe<String> deleted = client.deleteApi(apiId);
+        if (deleted.isError()) {
+            throw new AuditException("Unable to delete api: " + deleted.getError().getMessage());
         }
-        for (Api api : collection.getResult().list) {
-            Maybe<String> deleted = client.deleteApi(api.desc.id);
-            if (deleted.isError()) {
-                throw new AuditException("Unable to delete collection: " + deleted.getError().getMessage());
+    }
+
+    private Maybe<RemoteApi> createApi(URI file) throws IOException {
+        String relative = workspace.relativize(file).getPath();
+        logger.info(String.format("Creating new API for: %s", relative));
+        try {
+            Bundled bundled = JsonParser.bundle(file, workspace);
+            String title = "No Title";
+            JsonNode root = bundled.document.root.node;
+            if (root.get("info") != null && root.get("info").get("title") != null) {
+                title = root.get("info").get("title").asText();
             }
+            String apiName = Util.makeName(title);
+            Maybe<RemoteApi> api = client.createTechnicalApi(collectionId, relative, apiName, bundled.json);
+            if (api.isOk()) {
+                api.getResult().setMapping(bundled.mapping);
+            }
+            return api;
+        } catch (AuditException e) {
+            // in case of parsing error during bundling, do not stop audit
+            return new Maybe<RemoteApi>(new ErrorMessage(e));
+        } catch (BundlingException e) {
+            for (ReferenceResolutionFailure failure : e.getFailures()) {
+                logger.error(String.format("Failed to resolve reference in %s at %s: %s", failure.sourceFile,
+                        failure.sourcePointer, failure.message));
+            }
+            return new Maybe<RemoteApi>(new ErrorMessage(e));
         }
+    }
+
+    private Maybe<RemoteApi> updateApi(URI file, String apiId) throws IOException {
+        String relative = workspace.relativize(file).getPath();
+        logger.info(String.format("Updating existing API %s for: %s", apiId, relative));
+        try {
+            Bundled bundled = JsonParser.bundle(file, workspace);
+            Maybe<RemoteApi> api = client.updateApi(apiId, bundled.json);
+            if (api.isOk()) {
+                api.getResult().setMapping(bundled.mapping);
+            }
+            return api;
+        } catch (AuditException e) {
+            // in case of parsing error during bundling, do not stop audit
+            return new Maybe<RemoteApi>(new ErrorMessage(e));
+        } catch (BundlingException e) {
+            for (ReferenceResolutionFailure failure : e.getFailures()) {
+                logger.error(String.format("Failed to resolve reference in %s at %s: %s", failure.sourceFile,
+                        failure.sourcePointer, failure.message));
+            }
+            return new Maybe<RemoteApi>(new ErrorMessage(e));
+        }
+
+    }
+
+    private List<ApiAction> createApiActions(ApiCollection result, ArrayList<URI> filenames) {
+        List<ApiAction> actions = new ArrayList<>();
+
+        HashMap<URI, String> fileToId = new HashMap<>();
+        HashSet<URI> localFilenames = new HashSet<>();
+        HashSet<URI> remoteFilenames = new HashSet<>();
+
+        for (Api api : result.list) {
+            URI filename = workspace.resolve(api.desc.technicalName);
+            fileToId.put(filename, api.desc.id);
+            remoteFilenames.add(filename);
+        }
+
+        for (URI filename : filenames) {
+            localFilenames.add(filename);
+            if (fileToId.containsKey(filename)) {
+                actions.add(new ApiAction(ApiAction.UPDATE, filename, fileToId.get(filename)));
+            } else {
+                actions.add(new ApiAction(ApiAction.CREATE, filename));
+            }
+
+        }
+
+        // for every remote api which can't be found amongst
+        // the local filenames, issue "delete" action
+        for (URI filename : remoteFilenames) {
+            if (!localFilenames.contains(filename)) {
+                actions.add(new ApiAction(ApiAction.DELETE, filename, fileToId.get(filename)));
+            }
+
+        }
+
+        return actions;
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD")
@@ -157,5 +241,27 @@ public class DiscoveryAuditor {
         finder.setPatterns(search);
         List<URI> openApiFiles = finder.find();
         return openApiFiles;
+    }
+
+    class ApiAction {
+        final static int CREATE = 1;
+        final static int UPDATE = 2;
+        final static int DELETE = 3;
+
+        final int action;
+        final URI file;
+        final String apiId;
+
+        ApiAction(int action, URI file, String apiId) {
+            this.action = action;
+            this.file = file;
+            this.apiId = apiId;
+        }
+
+        ApiAction(int action, URI file) {
+            this.action = action;
+            this.file = file;
+            this.apiId = null;
+        }
     }
 }

@@ -19,7 +19,7 @@ public class AuditTest {
 
         assertEquals(result.score, 17);
         assertTrue(failures.contains("The API score 17 is lower than the set minimum score of 75"));
-        assertTrue(failures.contains("Found 36 issues with severity \"medium\" or higher"));
+        assertTrue(failures.contains("Found 38 issues with severity \"medium\" or higher"));
         assertTrue(failures.contains("Found issue \"v3-global-http-clear\""));
         assertTrue(failures.contains("Found issue \"v3-response-schema-undefined\""));
 

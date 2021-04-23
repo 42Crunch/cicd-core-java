@@ -53,7 +53,7 @@ public class JsonParser {
             Bundler bundler = new Bundler(parser, serializer);
             Document document = parser.parse(file);
             Mapping mapping = bundler.bundle(document);
-            return new Bundled(serializer.serialize(document), mapping);
+            return new Bundled(document, serializer.serialize(document), mapping);
         } catch (BundlingException e) {
             throw e;
         } catch (Exception e) {
@@ -62,10 +62,12 @@ public class JsonParser {
     }
 
     public static class Bundled {
+        public final Document document;
         public final String json;
         public final Mapping mapping;
 
-        public Bundled(String json, Mapping mapping) {
+        public Bundled(Document root, String json, Mapping mapping) {
+            this.document = root;
             this.json = json;
             this.mapping = mapping;
         }

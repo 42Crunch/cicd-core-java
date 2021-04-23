@@ -22,5 +22,7 @@ public class Api {
 
     public static class Description {
         public String id;
+        public String technicalName;
+
     }
 }
