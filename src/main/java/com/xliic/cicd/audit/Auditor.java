@@ -29,20 +29,13 @@ import com.xliic.common.Workspace;
 public class Auditor {
     private OpenApiFinder finder;
     private Logger logger;
-    private Secret apiKey;
-    private ResultCollector resultCollector;
     private String platformUrl;
     private Client client;
 
     public Auditor(OpenApiFinder finder, Logger logger, Secret apiKey) {
         this.finder = finder;
         this.logger = logger;
-        this.apiKey = apiKey;
         this.client = new Client(apiKey, platformUrl, logger);
-    }
-
-    public void setResultCollector(ResultCollector resultCollector) {
-        this.resultCollector = resultCollector;
     }
 
     public void setProxy(String proxyHost, int proxyPort) {
@@ -61,7 +54,7 @@ public class Auditor {
         this.client.setPlatformUrl(platformUrl);
     }
 
-    public String audit(Workspace workspace, String collectionName, int minScore)
+    public AuditResults audit(Workspace workspace, String collectionName, int minScore)
             throws IOException, InterruptedException, AuditException {
 
         AuditConfig config = null;
@@ -95,24 +88,26 @@ public class Auditor {
 
         HashMap<URI, Summary> report = readAssessment(workspace, uploaded, failureConditions);
 
-        // Report.collectResults(report);
-        // Report.displayReport(report, workspace);
+        return collectResults(report);
+    }
 
-        int totalFiles = report.size();
-        // int filesWithFailures = Report.countFilesWithFailures(report);
-        int filesWithFailures = 0;
-
-        if (filesWithFailures > 0) {
-            return String.format("Detected %d failure(s) in the %d OpenAPI file(s) checked", filesWithFailures,
-                    totalFiles);
-
-        }
-
-        if (totalFiles == 0) {
-            return "No OpenAPI files found.";
-        }
-
-        return null;
+    public void displayReport(AuditResults report, Workspace workspace) {
+        report.summary.forEach((file, summary) -> {
+            logger.error(String.format("Audited %s, the API score is %d", workspace.relativize(file).getPath(),
+                    summary.score));
+            if (summary.failures.length > 0) {
+                for (String failure : summary.failures) {
+                    logger.error("    " + failure);
+                }
+            } else {
+                logger.error("    No blocking issues found.");
+            }
+            if (summary.reportUrl != null) {
+                logger.error("    Details:");
+                logger.error(String.format("    %s", platformUrl, summary.reportUrl));
+            }
+            logger.error("");
+        });
     }
 
     HashMap<URI, Summary> readAssessment(Workspace workspace, RemoteApiMap uploaded,
@@ -127,6 +122,29 @@ public class Auditor {
             report.put(file, summary);
         }
         return report;
+    }
+
+    AuditResults collectResults(Map<URI, Summary> report) {
+        Map<URI, AuditResult> result = new HashMap<>();
+        int failures = 0;
+
+        for (Map.Entry<URI, Summary> entry : report.entrySet()) {
+            URI filename = entry.getKey();
+            Summary summary = entry.getValue();
+            String reportUrl = null;
+            com.xliic.openapi.bundler.Mapping mapping = null;
+            if (summary.api.isOk()) {
+                reportUrl = String.format("%s/apis/%s/security-audit-report", platformUrl,
+                        summary.api.getResult().apiId);
+                mapping = summary.api.getResult().mapping;
+            }
+            if (summary.failures.length > 0) {
+                failures++;
+            }
+            result.put(filename, new AuditResult(summary.score, summary.report, mapping, summary.failures, reportUrl));
+        }
+
+        return new AuditResults(result, failures);
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD")

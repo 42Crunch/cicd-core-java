@@ -19,7 +19,6 @@ class AuditorImpl {
         Finder finder = new Finder(workspace);
         SecretImpl apiKey = new SecretImpl(System.getenv("TEST_API_KEY"));
         auditor = new Auditor(finder, logger, apiKey);
-        auditor.setResultCollector(results);
         auditor.setPlatformUrl("https://platform.dev.42crunch.com");
     }
 
@@ -28,7 +27,7 @@ class AuditorImpl {
         this.score = score;
     }
 
-    String audit() throws IOException, InterruptedException, AuditException {
+    AuditResults audit() throws IOException, InterruptedException, AuditException {
         return auditor.audit(workspace, collectionName, score);
     }
 
