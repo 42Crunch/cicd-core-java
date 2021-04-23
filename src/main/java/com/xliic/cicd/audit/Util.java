@@ -1,0 +1,31 @@
+package com.xliic.cicd.audit;
+
+import java.net.URI;
+
+import com.xliic.cicd.audit.model.OpenApiFile;
+import com.xliic.cicd.audit.model.api.ErrorMessage;
+import com.xliic.cicd.audit.model.api.Maybe;
+import com.xliic.common.Workspace;
+
+public class Util {
+    static int MAX_NAME_LEN = 64;
+
+    static Maybe<Boolean> isOpenApiFile(URI file, Workspace workspace) {
+        try {
+            OpenApiFile openApiFile = JsonParser.parse(workspace.read(file), OpenApiFile.class,
+                    file.getPath().toLowerCase().endsWith(".yaml") || file.getPath().toLowerCase().endsWith(".yml"));
+            return new Maybe<Boolean>(openApiFile.isOpenApi());
+        } catch (Exception ex) {
+            return new Maybe<Boolean>(new ErrorMessage(String.format("Filed to parse a file '%s': %s",
+                    workspace.relativize(file).getPath(), ex.getMessage())));
+        }
+    }
+
+    static String makeName(String name) {
+        String mangled = name.replaceAll("[^A-Za-z0-9_\\-\\.\\ ]", "-");
+        if (mangled.length() > MAX_NAME_LEN) {
+            return mangled.substring(0, MAX_NAME_LEN);
+        }
+        return mangled;
+    }
+}

@@ -40,26 +40,33 @@ import org.apache.http.util.EntityUtils;
 import org.apache.http.client.config.RequestConfig;
 
 public class Client {
-    private static String proxyHost;
-    private static int proxyPort;
-    private static String userAgent;
-    private static String platformUrl = ClientConstants.PLATFORM_URL;
+    private String proxyHost;
+    private int proxyPort;
+    private String userAgent;
+    private String platformUrl;
+    private Secret apiKey;
+    private Logger logger;
 
-    public static void setUserAgent(String userAgent) {
-        Client.userAgent = userAgent;
+    public Client(Secret apiKey, String platformUrl, Logger logger) {
+        this.apiKey = apiKey;
+        this.platformUrl = platformUrl;
+        this.logger = logger;
     }
 
-    public static void setProxy(String proxyHost, int proxyPort) {
-        Client.proxyHost = proxyHost;
-        Client.proxyPort = proxyPort;
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
     }
 
-    public static void setPlatformUrl(String platformUrl) {
-        Client.platformUrl = platformUrl;
+    public void setProxy(String proxyHost, int proxyPort) {
+        this.proxyHost = proxyHost;
+        this.proxyPort = proxyPort;
     }
 
-    public static Maybe<RemoteApi> createApi(String collectionId, String name, String json, Secret apiKey,
-            Logger logger) throws IOException {
+    public void setPlatformUrl(String platformUrl) {
+        this.platformUrl = platformUrl;
+    }
+
+    public Maybe<RemoteApi> createApi(String collectionId, String name, String json) throws IOException {
         HttpPost request = new HttpPost(platformUrl + "/api/v1/apis");
 
         HttpEntity data = MultipartEntityBuilder
@@ -76,10 +83,9 @@ public class Client {
         return new Maybe<RemoteApi>(new RemoteApi(api.getResult().desc.id, ApiStatus.freshApiStatus()));
     }
 
-    public static Maybe<RemoteApi> updateApi(String apiId, String json, Secret apiKey, Logger logger)
-            throws IOException {
+    public Maybe<RemoteApi> updateApi(String apiId, String json) throws IOException {
         // read api status first
-        Maybe<ApiStatus> status = readApiStatus(apiId, apiKey, logger);
+        Maybe<ApiStatus> status = readApiStatus(apiId);
         if (status.isError()) {
             return new Maybe<RemoteApi>(status.getError());
         }
@@ -95,13 +101,12 @@ public class Client {
         return new Maybe<RemoteApi>(new RemoteApi(apiId, status.getResult()));
     }
 
-    public static Maybe<String> deleteApi(String apiId, Secret apiKey, Logger logger) throws IOException {
+    public Maybe<String> deleteApi(String apiId) throws IOException {
         HttpDelete request = new HttpDelete(String.format("%s/api/v1/apis/%s", platformUrl, apiId));
         return new ProxyClient<String>(request, apiKey, String.class, logger).execute();
     }
 
-    public static Maybe<AssessmentResponse> readAssessment(Maybe<RemoteApi> api, Secret apiKey, Logger logger)
-            throws ClientProtocolException, IOException {
+    public Maybe<AssessmentResponse> readAssessment(Maybe<RemoteApi> api) throws ClientProtocolException, IOException {
         if (api.isError()) {
             return new Maybe<AssessmentResponse>(api.getError());
         }
@@ -112,7 +117,7 @@ public class Client {
         LocalDateTime start = LocalDateTime.now();
         LocalDateTime now = LocalDateTime.now();
         while (Duration.between(start, now).toMillis() < ClientConstants.ASSESSMENT_MAX_WAIT) {
-            Maybe<ApiStatus> status = readApiStatus(api.getResult().apiId, apiKey, logger);
+            Maybe<ApiStatus> status = readApiStatus(api.getResult().apiId);
 
             // check if assessment is ready, or bail out with the error
             if (status.isOk() && status.getResult().isProcessed
@@ -136,7 +141,7 @@ public class Client {
                 new ErrorMessage("Timed out waiting for audit result for API ID: " + api.getResult().apiId));
     }
 
-    public static Maybe<ApiStatus> readApiStatus(String apiId, Secret apiKey, Logger logger) throws IOException {
+    public Maybe<ApiStatus> readApiStatus(String apiId) throws IOException {
         HttpGet request = new HttpGet(platformUrl + "/api/v1/apis/" + apiId);
         Maybe<Api> result = new ProxyClient<Api>(request, apiKey, Api.class, logger).execute();
         if (result.isError()) {
@@ -146,19 +151,17 @@ public class Client {
                 new ApiStatus(result.getResult().assessment.isProcessed, result.getResult().assessment.last));
     }
 
-    public static Maybe<ApiCollection> listCollection(String collectionId, Secret apiKey, Logger logger)
-            throws IOException {
+    public Maybe<ApiCollection> listCollection(String collectionId) throws IOException {
         HttpGet request = new HttpGet(String.format("%s/api/v1/collections/%s/apis", platformUrl, collectionId));
         return new ProxyClient<ApiCollection>(request, apiKey, ApiCollection.class, logger).execute();
     }
 
-    public static Maybe<ApiCollections> listCollections(Secret apiKey, Logger logger) throws IOException {
+    public Maybe<ApiCollections> listCollections() throws IOException {
         HttpGet request = new HttpGet(platformUrl + "/api/v1/collections");
         return new ProxyClient<ApiCollections>(request, apiKey, ApiCollections.class, logger).execute();
     }
 
-    public static Maybe<ApiCollections.ApiCollection> createCollection(String collectionName, Secret apiKey,
-            Logger logger) throws IOException {
+    public Maybe<ApiCollections.ApiCollection> createCollection(String collectionName) throws IOException {
         HttpPost request = new HttpPost(platformUrl + "/api/v1/collections");
         request.setEntity(new StringEntity(String.format("{\"name\": \"%s\", \"isShared\": false}", collectionName),
                 ContentType.APPLICATION_JSON));
@@ -166,12 +169,12 @@ public class Client {
                 logger).execute();
     }
 
-    public static Maybe<String> deleteCollection(String collectionId, Secret apiKey, Logger logger) throws IOException {
+    public Maybe<String> deleteCollection(String collectionId) throws IOException {
         HttpDelete request = new HttpDelete(String.format("%s/api/v1/collections/%s", platformUrl, collectionId));
         return new ProxyClient<String>(request, apiKey, String.class, logger).execute();
     }
 
-    static class ProxyClient<T> {
+    class ProxyClient<T> {
         private java.lang.Class<T> contentClass;
         private Logger logger;
         private HttpRequestBase request;
@@ -230,18 +233,18 @@ public class Client {
             }
         }
 
-        private static HttpHost getProxyHost() {
-            if (Client.proxyHost != null) {
-                return new HttpHost(Client.proxyHost, Client.proxyPort, "http");
+        private HttpHost getProxyHost() {
+            if (proxyHost != null) {
+                return new HttpHost(proxyHost, proxyPort, "http");
             }
             return null;
         }
 
-        private static void configureRequest(HttpRequestBase request, Secret apiKey, Logger logger) {
+        private void configureRequest(HttpRequestBase request, Secret apiKey, Logger logger) {
             request.setHeader("Accept", "application/json");
             request.setHeader("X-API-KEY", apiKey.getPlainText());
-            if (Client.userAgent != null) {
-                request.setHeader("User-Agent", Client.userAgent);
+            if (userAgent != null) {
+                request.setHeader("User-Agent", userAgent);
             }
 
             HttpHost proxy = getProxyHost();

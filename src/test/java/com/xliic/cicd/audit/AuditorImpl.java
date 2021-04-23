@@ -3,7 +3,6 @@ package com.xliic.cicd.audit;
 import java.io.IOException;
 
 import com.xliic.cicd.audit.ResultCollectorImpl.Result;
-import com.xliic.cicd.audit.client.ClientConstants;
 
 class AuditorImpl {
     ResultCollectorImpl results;
@@ -21,7 +20,7 @@ class AuditorImpl {
         SecretImpl apiKey = new SecretImpl(System.getenv("TEST_API_KEY"));
         auditor = new Auditor(finder, logger, apiKey);
         auditor.setResultCollector(results);
-        auditor.setPlatformUrl(ClientConstants.DEV_PLATFORM_URL);
+        auditor.setPlatformUrl("https://platform.dev.42crunch.com");
     }
 
     AuditorImpl(String dirname, int score) throws IOException {
