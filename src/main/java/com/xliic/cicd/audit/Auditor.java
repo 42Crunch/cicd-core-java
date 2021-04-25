@@ -17,11 +17,14 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.RemoteApi;
 import com.xliic.cicd.audit.client.RemoteApiMap;
-import com.xliic.cicd.audit.config.AuditConfig;
-import com.xliic.cicd.audit.config.Config;
+import com.xliic.cicd.audit.config.ConfigMerge;
 import com.xliic.cicd.audit.config.ConfigReader;
-import com.xliic.cicd.audit.config.Discovery;
-import com.xliic.cicd.audit.config.Mapping;
+import com.xliic.cicd.audit.config.DefaultConfig;
+import com.xliic.cicd.audit.config.model.AuditConfig;
+import com.xliic.cicd.audit.config.model.Config;
+import com.xliic.cicd.audit.config.model.Discovery;
+import com.xliic.cicd.audit.config.model.FailOn;
+import com.xliic.cicd.audit.config.model.Mapping;
 import com.xliic.cicd.audit.model.api.Maybe;
 import com.xliic.cicd.audit.model.assessment.AssessmentReport;
 import com.xliic.cicd.audit.model.assessment.AssessmentResponse;
@@ -58,24 +61,19 @@ public class Auditor {
     public AuditResults audit(Workspace workspace, String repoName, String branchName, int minScore)
             throws IOException, InterruptedException, AuditException {
 
-        Config yamlConfig = null;
+        AuditConfig config = DefaultConfig.create();
         URI configFile = workspace.resolve(ConfigReader.CONFIG_FILE_NAME);
         if (workspace.exists(configFile)) {
             try {
-                yamlConfig = ConfigReader.read(workspace.read(configFile));
+                Config yamlConfig = ConfigReader.read(workspace.read(configFile));
+                config = ConfigMerge.merge(yamlConfig.getAudit().getBranches().get("master"), config);
             } catch (final IOException e) {
                 throw new AuditException("Failed to read config file", e);
             }
-        } else {
-            // FIXME default
-            // config = Config.createDefault();
         }
-
-        AuditConfig config = populateDefaults(yamlConfig, branchName);
 
         final Discovery discovery = config.getDiscovery();
         final Mapping mapping = config.getMapping();
-        final FailureConditions failureConditions = new FailureConditions(minScore, config.getFailOn());
 
         DiscoveryAuditor discoveryAuditor = new DiscoveryAuditor(workspace, this.client, this.logger);
         MappingAuditor mappingAuditor = new MappingAuditor(this.client, this.logger);
@@ -83,26 +81,15 @@ public class Auditor {
         final RemoteApiMap uploaded = new RemoteApiMap();
         // discover and upload apis
         if (discovery.isEnabled()) {
-            uploaded.putAll(
-                    discoveryAuditor.audit(workspace, finder, repoName, branchName, discovery.getSearch(), mapping));
-
+            uploaded.putAll(discoveryAuditor.audit(workspace, finder, repoName, branchName, "default",
+                    discovery.getSearch(), mapping));
         }
 
         uploaded.putAll(mappingAuditor.audit(workspace, mapping));
 
-        HashMap<URI, Summary> report = readAssessment(workspace, uploaded, failureConditions);
+        HashMap<URI, Summary> report = readAssessment(workspace, uploaded, config.getFailOn());
 
         return collectResults(report);
-    }
-
-    private AuditConfig populateDefaults(Config yamlConfig, String branch) {
-        AuditConfig c = yamlConfig.getAudit().getBranches().get(branch);
-
-        // default empty mapping
-        if (c.getMapping() == null) {
-            c.setMapping(Mapping.emptyMapping());
-        }
-        return c;
     }
 
     public void displayReport(AuditResults report, Workspace workspace) {
@@ -124,8 +111,8 @@ public class Auditor {
         });
     }
 
-    HashMap<URI, Summary> readAssessment(Workspace workspace, RemoteApiMap uploaded,
-            FailureConditions failureConditions) throws IOException {
+    HashMap<URI, Summary> readAssessment(Workspace workspace, RemoteApiMap uploaded, FailOn failureConditions)
+            throws IOException {
         HashMap<URI, Summary> report = new HashMap<>();
         for (Map.Entry<URI, Maybe<RemoteApi>> entry : uploaded.entrySet()) {
             URI file = entry.getKey();
@@ -162,8 +149,8 @@ public class Auditor {
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD")
-    private Summary checkAssessment(Maybe<RemoteApi> api, Maybe<AssessmentResponse> assessment,
-            FailureConditions conditions) throws JsonParseException, JsonMappingException, IOException {
+    private Summary checkAssessment(Maybe<RemoteApi> api, Maybe<AssessmentResponse> assessment, FailOn conditions)
+            throws JsonParseException, JsonMappingException, IOException {
         if (assessment.isError()) {
             return new Summary(api, 0, null, new String[] { assessment.getError().getMessage() });
         }

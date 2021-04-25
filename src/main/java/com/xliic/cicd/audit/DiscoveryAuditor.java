@@ -19,7 +19,7 @@ import com.xliic.cicd.audit.JsonParser.Bundled;
 import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.RemoteApi;
 import com.xliic.cicd.audit.client.RemoteApiMap;
-import com.xliic.cicd.audit.config.Mapping;
+import com.xliic.cicd.audit.config.model.Mapping;
 import com.xliic.cicd.audit.model.api.Api;
 import com.xliic.cicd.audit.model.api.ApiCollection;
 import com.xliic.cicd.audit.model.api.ApiCollections;
@@ -42,8 +42,8 @@ public class DiscoveryAuditor {
         this.workspace = workspace;
     }
 
-    RemoteApiMap audit(Workspace workspace, OpenApiFinder finder, String repoName, String branchName, String[] search,
-            Mapping mapping) throws IOException, InterruptedException, AuditException {
+    RemoteApiMap audit(Workspace workspace, OpenApiFinder finder, String repoName, String branchName, String source,
+            String[] search, Mapping mapping) throws IOException, InterruptedException, AuditException {
         DiscoveredOpenApiFiles discovered = discoverOpenApiFiles(workspace, finder, search, mapping);
 
         // collect list of successfully detected OpenAPI files
@@ -54,7 +54,7 @@ public class DiscoveryAuditor {
             }
         }
 
-        collectionId = createOrFindCollectionId(Util.makeTechnicalCollectionName(repoName, branchName));
+        collectionId = createOrFindCollectionId(Util.makeTechnicalCollectionName(repoName, branchName), source);
 
         RemoteApiMap remoteApis = uploadFilesToCollection(openApiFilenames, workspace, collectionId);
 
@@ -217,7 +217,7 @@ public class DiscoveryAuditor {
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD")
-    private String createOrFindCollectionId(String collectionName) throws AuditException, IOException {
+    private String createOrFindCollectionId(String collectionName, String source) throws AuditException, IOException {
 
         // check existing collections to see if collection with collectionName already
         // exists
@@ -226,7 +226,7 @@ public class DiscoveryAuditor {
             return collection.getResult().id;
         } else {
             if (collection.getError().getHttpStatus() == 404) {
-                Maybe<ApiCollections.ApiCollection> cc = client.createTechnicalCollection(collectionName);
+                Maybe<ApiCollections.ApiCollection> cc = client.createTechnicalCollection(collectionName, source);
                 if (cc.isError()) {
                     throw new AuditException("Unable to create collection: " + collection.getError().getMessage());
                 }

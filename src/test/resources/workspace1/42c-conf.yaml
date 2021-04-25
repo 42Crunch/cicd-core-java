@@ -2,8 +2,8 @@ audit:
   branches:
     master:
       # map filenames to IDs of already existing APIs
-      #mapping:
-      #  foo/bar/petstore-v3.json: a193b82d-5833-47f8-81d2-cfc4fe175914
+      mapping:
+        petstore-v3.yaml: 410c36d5-ca71-4b5e-a142-c12075a34d9c
 
       # find OpenAPI files in files with .json .yml .yaml extensions,
       # exclude node_modules/ directory from the search
@@ -17,6 +17,9 @@ audit:
       # in addition to min score specified in the Azure Pipelines
       # check for the following issues
       fail_on:
+        score:
+          data: 67
+
         # fail if OpenAPI file is not 'valid' OpenAPI as per audit report
         invalid_contract: true
 

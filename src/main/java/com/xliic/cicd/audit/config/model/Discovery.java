@@ -3,22 +3,14 @@
  Licensed under the GNU Affero General Public License version 3. See LICENSE.txt in the project root for license information.
 */
 
-package com.xliic.cicd.audit.config;
+package com.xliic.cicd.audit.config.model;
 
 import java.util.Arrays;
 
 public class Discovery {
-    private static final String[] DEFAULT_SEARCH = new String[] { "**/*.json", "**/*.yaml", "**/*.yml",
-            "!node_modules/**", "!tsconfig.json" };
 
     private boolean enabled;
     private String[] search;
-
-    public static Discovery defaultConfig() {
-        Discovery discovery = new Discovery();
-        discovery.search = DEFAULT_SEARCH;
-        return discovery;
-    }
 
     public Discovery(boolean enabled) {
         // called when discovery: false is specified

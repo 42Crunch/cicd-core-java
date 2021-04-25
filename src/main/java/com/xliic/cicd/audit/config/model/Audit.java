@@ -3,7 +3,7 @@
  Licensed under the GNU Affero General Public License version 3. See LICENSE.txt in the project root for license information.
 */
 
-package com.xliic.cicd.audit.config;
+package com.xliic.cicd.audit.config.model;
 
 public class Audit {
     private Branches branches;

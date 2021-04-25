@@ -3,18 +3,14 @@
  Licensed under the GNU Affero General Public License version 3. See LICENSE.txt in the project root for license information.
 */
 
-package com.xliic.cicd.audit.config;
+package com.xliic.cicd.audit.config.model;
 
 import java.util.HashMap;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
-public class Branches extends HashMap<String, AuditConfig> {
+public class Mapping extends HashMap<String, String> {
     @JsonAnySetter
-    public void set(String name, AuditConfig config) {
-        this.put(name, config);
-    }
-
-    public static Branches emptyBranches() {
-        return new Branches();
+    public void set(String filename, String apiId) {
+        this.put(filename, apiId);
     }
 }

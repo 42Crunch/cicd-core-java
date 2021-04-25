@@ -3,7 +3,7 @@
  Licensed under the GNU Affero General Public License version 3. See LICENSE.txt in the project root for license information.
 */
 
-package com.xliic.cicd.audit.config;
+package com.xliic.cicd.audit.config.model;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 
@@ -12,12 +12,6 @@ public class FailOn {
     private Score score;
     private Severity severity;
     private IssueId issueId;
-
-    public static FailOn defaultConfig() {
-        FailOn failOn = new FailOn();
-        failOn.setInvalidContract(true);
-        return failOn;
-    }
 
     public Severity getSeverity() {
         return severity;

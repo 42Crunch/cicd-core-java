@@ -11,6 +11,7 @@ import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import com.xliic.cicd.audit.AuditException;
+import com.xliic.cicd.audit.config.model.Config;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -41,18 +42,6 @@ public class ConfigReader {
 
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         Config config = mapper.readValue(data, Config.class);
-
-        // FIXME do defaults somewhere
-
-        // // default discovery settings
-        // if (config.getAudit().getDiscovery() == null) {
-        // config.getAudit().setDiscovery(Discovery.defaultConfig());
-        // }
-
-        // // default fail_on section:
-        // if (config.getAudit().getFailOn() == null) {
-        // config.getAudit().setFailOn(FailOn.defaultConfig());
-        // }
 
         return config;
     }

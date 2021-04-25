@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import com.xliic.cicd.audit.config.Severity;
+import com.xliic.cicd.audit.config.model.FailOn;
+import com.xliic.cicd.audit.config.model.Severity;
 import com.xliic.cicd.audit.model.assessment.AssessmentReport;
 import com.xliic.cicd.audit.model.assessment.AssessmentResponse;
 import com.xliic.cicd.audit.model.assessment.AssessmentReport.Issue;
@@ -28,59 +29,55 @@ public class FailureChecker {
         names.put("info", 1);
     }
 
-    public ArrayList<String> checkAssessment(AssessmentResponse assessment, AssessmentReport report,
-            FailureConditions conditions) {
+    public ArrayList<String> checkAssessment(AssessmentResponse assessment, AssessmentReport report, FailOn failOn) {
         ArrayList<String> failures = new ArrayList<String>();
 
-        failures.addAll(checkMinScore(assessment, conditions));
-
-        if (conditions.failOn != null) {
-            failures.addAll(checkCategoryScore(report, conditions));
-            failures.addAll(checkInvalidContract(report, conditions));
-            failures.addAll(checkSeverity(report, conditions));
-            failures.addAll(checkIssueId(report, conditions));
-        }
+        failures.addAll(checkMinScore(assessment, failOn));
+        failures.addAll(checkCategoryScore(report, failOn));
+        failures.addAll(checkInvalidContract(report, failOn));
+        failures.addAll(checkSeverity(report, failOn));
+        failures.addAll(checkIssueId(report, failOn));
 
         return failures;
     }
 
     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("NP_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD")
-    private ArrayList<String> checkMinScore(AssessmentResponse assessment, FailureConditions conditions) {
+    private ArrayList<String> checkMinScore(AssessmentResponse assessment, FailOn conditions) {
         ArrayList<String> failures = new ArrayList<String>();
+
+        Integer overallScore = conditions.getScore().getOverall();
         int score = Math.round(assessment.attr.data.grade);
-        if (score < conditions.minScore) {
-            failures.add(String.format("The API score %d is lower than the set minimum score of %d", score,
-                    conditions.minScore));
-        }
-        return failures;
-    }
-
-    private ArrayList<String> checkCategoryScore(AssessmentReport report, FailureConditions conditions) {
-        ArrayList<String> failures = new ArrayList<String>();
-        if (conditions.failOn.getScore() != null) {
-            Integer dataScore = conditions.failOn.getScore().getData();
-            Integer securityScore = conditions.failOn.getScore().getSecurity();
-
-            if (dataScore != null && getScore(report.data) < dataScore.intValue()) {
-                failures.add(String.format("The API data score %d is lower than the set minimum score of %d",
-                        getScore(report.data), dataScore));
-            }
-
-            if (securityScore != null && getScore(report.security) < securityScore.intValue()) {
-                failures.add(String.format("The API security score %d is lower than the set minimum score of %d",
-                        getScore(report.security), securityScore));
-            }
-
+        if (overallScore != null && score < overallScore) {
+            failures.add(
+                    String.format("The API score %d is lower than the set minimum score of %d", score, overallScore));
         }
 
         return failures;
     }
 
-    private ArrayList<String> checkInvalidContract(AssessmentReport report, FailureConditions conditions) {
+    private ArrayList<String> checkCategoryScore(AssessmentReport report, FailOn conditions) {
         ArrayList<String> failures = new ArrayList<String>();
 
-        boolean denyInvalidContract = conditions.failOn.getInvalidContract() == null
-                || conditions.failOn.getInvalidContract().booleanValue();
+        Integer dataScore = conditions.getScore().getData();
+        if (dataScore != null && getScore(report.data) < dataScore) {
+            failures.add(String.format("The API data score %d is lower than the set minimum score of %d",
+                    getScore(report.data), dataScore));
+        }
+
+        Integer securityScore = conditions.getScore().getSecurity();
+        if (securityScore != null && getScore(report.security) < securityScore.intValue()) {
+            failures.add(String.format("The API security score %d is lower than the set minimum score of %d",
+                    getScore(report.security), securityScore));
+        }
+
+        return failures;
+    }
+
+    private ArrayList<String> checkInvalidContract(AssessmentReport report, FailOn conditions) {
+        ArrayList<String> failures = new ArrayList<String>();
+
+        boolean denyInvalidContract = conditions.getInvalidContract() == null
+                || conditions.getInvalidContract().booleanValue();
 
         if (denyInvalidContract && !report.openapiState.equals("valid")) {
             failures.add("The OpenAPI definition is not valid");
@@ -89,9 +86,9 @@ public class FailureChecker {
         return failures;
     }
 
-    private ArrayList<String> checkIssueId(AssessmentReport report, FailureConditions conditions) {
+    private ArrayList<String> checkIssueId(AssessmentReport report, FailOn conditions) {
         ArrayList<String> failures = new ArrayList<String>();
-        if (conditions.failOn.getIssueId() != null) {
+        if (conditions.getIssueId() != null) {
 
             HashSet<String> reportIssueIds = new HashSet<String>();
             if (report.data != null && report.data.issues != null) {
@@ -101,11 +98,10 @@ public class FailureChecker {
                 reportIssueIds.addAll(report.security.issues.keySet());
             }
 
-            for (String id : conditions.failOn.getIssueId()) {
+            for (String id : conditions.getIssueId()) {
                 for (String reportId : reportIssueIds) {
-                    String issueWithDashes = reportId.replace('.', '-');
-                    if (issueWithDashes.matches(id)) {
-                        failures.add(String.format("Found issue \"%s\"", issueWithDashes));
+                    if (reportId.matches(id)) {
+                        failures.add(String.format("Found issue \"%s\"", reportId));
                     }
                 }
 
@@ -115,9 +111,9 @@ public class FailureChecker {
         return failures;
     }
 
-    private ArrayList<String> checkSeverity(AssessmentReport report, FailureConditions conditions) {
+    private ArrayList<String> checkSeverity(AssessmentReport report, FailOn conditions) {
         ArrayList<String> failures = new ArrayList<String>();
-        Severity severity = conditions.failOn.getSeverity();
+        Severity severity = conditions.getSeverity();
 
         if (severity != null) {
             String dataSeverity = severity.getData();

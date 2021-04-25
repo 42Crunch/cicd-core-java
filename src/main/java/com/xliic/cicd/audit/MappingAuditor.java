@@ -13,7 +13,7 @@ import com.xliic.cicd.audit.JsonParser.Bundled;
 import com.xliic.cicd.audit.client.Client;
 import com.xliic.cicd.audit.client.RemoteApi;
 import com.xliic.cicd.audit.client.RemoteApiMap;
-import com.xliic.cicd.audit.config.Mapping;
+import com.xliic.cicd.audit.config.model.Mapping;
 import com.xliic.cicd.audit.model.api.ErrorMessage;
 import com.xliic.cicd.audit.model.api.Maybe;
 import com.xliic.common.Workspace;

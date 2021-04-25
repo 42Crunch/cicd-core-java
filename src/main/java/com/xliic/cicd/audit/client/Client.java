@@ -39,8 +39,6 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -79,8 +77,8 @@ public class Client {
             throws IOException {
         String encodedJson = Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
         HttpPost request = new HttpPost(platformUrl + "/api/v2/apis");
-        request.setEntity(
-                jsonEntity(new String[][] { { "cid", collectionId }, { "name", name }, { "specfile", encodedJson } }));
+        request.setEntity(jsonEntity(new String[][] { { "cid", collectionId }, { "technicalName", technicalName },
+                { "name", name }, { "specfile", encodedJson } }));
         Maybe<Api> api = new ProxyClient<Api>(request, apiKey, Api.class, logger).execute();
         if (api.isError()) {
             return new Maybe<RemoteApi>(api.getError());
@@ -167,10 +165,11 @@ public class Client {
         return new ProxyClient<TechnicalCollection>(request, apiKey, TechnicalCollection.class, logger).execute();
     }
 
-    public Maybe<ApiCollections.ApiCollection> createTechnicalCollection(String name) throws IOException {
+    public Maybe<ApiCollections.ApiCollection> createTechnicalCollection(String name, String source)
+            throws IOException {
         HttpPost request = new HttpPost(platformUrl + "/api/v1/collections");
         request.setEntity(
-                jsonEntity(new String[][] { { "technicalName", name }, { "name", name }, { "source", "default" } }));
+                jsonEntity(new String[][] { { "technicalName", name }, { "name", name }, { "source", source } }));
         return new ProxyClient<ApiCollections.ApiCollection>(request, apiKey, ApiCollections.ApiCollection.class,
                 logger).execute();
 
@@ -204,6 +203,7 @@ public class Client {
             this.logger = logger;
         }
 
+        @SuppressWarnings("unchecked")
         Maybe<T> execute() throws IOException {
             CloseableHttpClient httpClient = HttpClients.createSystem();
             CloseableHttpResponse response = null;
