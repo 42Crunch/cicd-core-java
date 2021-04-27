@@ -24,6 +24,7 @@ import com.xliic.cicd.audit.model.api.TechnicalCollection;
 import com.xliic.cicd.audit.JsonParser;
 import com.xliic.cicd.audit.Logger;
 import com.xliic.cicd.audit.Secret;
+import com.xliic.cicd.audit.Util;
 import com.xliic.cicd.audit.model.api.Api;
 import com.xliic.cicd.audit.model.api.ApiCollection;
 import com.xliic.cicd.audit.model.assessment.AssessmentResponse;
@@ -168,8 +169,8 @@ public class Client {
     public Maybe<ApiCollections.ApiCollection> createTechnicalCollection(String name, String source)
             throws IOException {
         HttpPost request = new HttpPost(platformUrl + "/api/v1/collections");
-        request.setEntity(
-                jsonEntity(new String[][] { { "technicalName", name }, { "name", name }, { "source", source } }));
+        request.setEntity(jsonEntity(
+                new String[][] { { "technicalName", name }, { "name", Util.makeName(name) }, { "source", source } }));
         return new ProxyClient<ApiCollections.ApiCollection>(request, apiKey, ApiCollections.ApiCollection.class,
                 logger).execute();
 

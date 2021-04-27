@@ -26,16 +26,16 @@ public class Util {
         }
     }
 
-    static String makeName(String name) {
-        String mangled = name.replaceAll("[^A-Za-z0-9_\\-\\.\\ ]", "-");
+    public static String makeName(String name) {
+        String mangled = name.replaceAll("[^A-Za-z0-9_\\-\\.\\ ]", " ");
         if (mangled.length() > MAX_NAME_LEN) {
             return mangled.substring(0, MAX_NAME_LEN);
         }
         return mangled;
     }
 
-    static String makeTechnicalCollectionName(String repoName, String branchName) {
+    public static String makeTechnicalCollectionName(String repoName, String branchName) {
         // FIXME check for max name len
-        return String.format("%s::%s", repoName, branchName);
+        return String.format("%s@@%s", repoName, branchName);
     }
 }

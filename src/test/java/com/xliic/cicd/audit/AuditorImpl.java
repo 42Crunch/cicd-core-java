@@ -24,7 +24,7 @@ class AuditorImpl {
     }
 
     AuditResults audit(String branch) throws IOException, InterruptedException, AuditException {
-        this.results = auditor.audit(workspace, "test-repo", branch, score);
+        this.results = auditor.audit(workspace, "https://github.com/42Crunch/cicd-core-java.git", branch, score);
         return this.results;
     }
 
