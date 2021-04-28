@@ -117,8 +117,13 @@ public class Auditor {
         for (Map.Entry<URI, Maybe<RemoteApi>> entry : uploaded.entrySet()) {
             URI file = entry.getKey();
             Maybe<RemoteApi> api = entry.getValue();
-            logger.info(String.format("Retrieving audit results for: %s", workspace.relativize(file).getPath()));
-            Maybe<AssessmentResponse> assessment = client.readAssessment(api);
+            Maybe<AssessmentResponse> assessment;
+            if (api.isOk()) {
+                logger.info(String.format("Retrieving audit results for: %s", workspace.relativize(file).getPath()));
+                assessment = client.readAssessment(api);
+            } else {
+                assessment = new Maybe<AssessmentResponse>(api.getError());
+            }
             Summary summary = checkAssessment(api, assessment, failureConditions);
             report.put(file, summary);
         }

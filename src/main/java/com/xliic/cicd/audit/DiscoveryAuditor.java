@@ -71,6 +71,7 @@ public class DiscoveryAuditor {
     private DiscoveredOpenApiFiles discoverOpenApiFiles(Workspace workspace, OpenApiFinder finder, String[] search,
             Mapping mapping) throws IOException, InterruptedException, AuditException {
         DiscoveredOpenApiFiles discovered = new DiscoveredOpenApiFiles();
+        DiscoveredOpenApiFiles errors = new DiscoveredOpenApiFiles();
 
         List<URI> files = findOpenapiFiles(workspace, finder, search);
         String filenames = files.stream().map(file -> workspace.relativize(file).getPath())
@@ -79,10 +80,10 @@ public class DiscoveryAuditor {
         for (URI file : files) {
             if (!mapping.containsKey(workspace.relativize(file).getPath())) {
                 Maybe<Boolean> openapi = Util.isOpenApiFile(file, workspace);
-                // put discovered OpenAPI files onto the list of discovered ones
-                // also add there parsing errors
-                if (openapi.isOk() && openapi.getResult() == true || openapi.isError()) {
+                if (openapi.isOk() && openapi.getResult() == true) {
                     discovered.put(file, openapi);
+                } else if (openapi.isError()) {
+                    errors.put(file, openapi);
                 }
             }
         }
@@ -90,6 +91,10 @@ public class DiscoveryAuditor {
         String discoveredFilenames = discovered.keySet().stream().map(file -> workspace.relativize(file).getPath())
                 .collect(Collectors.joining(","));
         logger.info(String.format("Discovered OpenAPI files: %s", discoveredFilenames));
+
+        // return all files which have failed to parse as well
+        // so these can be included in the erorr report
+        discovered.putAll(errors);
 
         return discovered;
     }
