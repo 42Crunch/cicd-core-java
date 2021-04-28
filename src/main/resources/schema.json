@@ -9,11 +9,6 @@
           "additionalProperties": {
             "$ref": "#/definitions/config"
           }
-        },
-        "tags": {
-          "additionalProperties": {
-            "$ref": "#/definitions/config"
-          }
         }
       },
       "additionalProperties": false

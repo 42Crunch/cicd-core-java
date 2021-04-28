@@ -60,6 +60,11 @@
       <version>1.10-SNAPSHOT</version>
     </dependency>
     <dependency>
+      <groupId>io.github.azagniotov</groupId>
+      <artifactId>ant-style-path-matcher</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <version>4.5.10</version>

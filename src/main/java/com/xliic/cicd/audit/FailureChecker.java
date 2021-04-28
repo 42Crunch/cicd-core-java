@@ -20,6 +20,7 @@ import com.xliic.cicd.audit.model.assessment.AssessmentReport.Section;
 public class FailureChecker {
 
     private final HashMap<String, Integer> names = new HashMap<String, Integer>();
+    private final GlobMatcher matcher = new GlobMatcher();
 
     public FailureChecker() {
         names.put("critical", 5);
@@ -90,21 +91,20 @@ public class FailureChecker {
         ArrayList<String> failures = new ArrayList<String>();
         if (conditions.getIssueId() != null) {
 
-            HashSet<String> reportIssueIds = new HashSet<String>();
+            HashSet<String> reportedIssueIds = new HashSet<String>();
             if (report.data != null && report.data.issues != null) {
-                reportIssueIds.addAll(report.data.issues.keySet());
+                reportedIssueIds.addAll(report.data.issues.keySet());
             }
             if (report.security != null && report.security.issues != null) {
-                reportIssueIds.addAll(report.security.issues.keySet());
+                reportedIssueIds.addAll(report.security.issues.keySet());
             }
 
-            for (String id : conditions.getIssueId()) {
-                for (String reportId : reportIssueIds) {
-                    if (reportId.matches(id)) {
-                        failures.add(String.format("Found issue \"%s\"", reportId));
+            for (String idPattern : conditions.getIssueId()) {
+                for (String reportedId : reportedIssueIds) {
+                    if (matcher.matches(idPattern, reportedId)) {
+                        failures.add(String.format("Found issue \"%s\"", reportedId));
                     }
                 }
-
             }
         }
 

@@ -5,10 +5,18 @@
 
 package com.xliic.cicd.audit.config.model;
 
-import java.util.HashMap;
+import java.util.Comparator;
+import java.util.TreeMap;
+import java.util.function.Function;
+
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
-public class Branches extends HashMap<String, AuditConfig> {
+public class Branches extends TreeMap<String, AuditConfig> {
+    Branches() {
+        // Branches is a TreeMap sorted by key length with longest key first
+        super(Comparator.comparingInt(String::length).reversed().thenComparing(Function.identity()));
+    }
+
     @JsonAnySetter
     public void set(String name, AuditConfig config) {
         this.put(name, config);

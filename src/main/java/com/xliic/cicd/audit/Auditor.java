@@ -21,6 +21,7 @@ import com.xliic.cicd.audit.config.ConfigMerge;
 import com.xliic.cicd.audit.config.ConfigReader;
 import com.xliic.cicd.audit.config.DefaultConfig;
 import com.xliic.cicd.audit.config.model.AuditConfig;
+import com.xliic.cicd.audit.config.model.Branches;
 import com.xliic.cicd.audit.config.model.Config;
 import com.xliic.cicd.audit.config.model.Discovery;
 import com.xliic.cicd.audit.config.model.FailOn;
@@ -66,7 +67,14 @@ public class Auditor {
         if (workspace.exists(configFile)) {
             try {
                 Config yamlConfig = ConfigReader.read(workspace.read(configFile));
-                config = ConfigMerge.merge(yamlConfig.getAudit().getBranches().get("master"), config);
+                AuditConfig branchConfig = matchBranch(yamlConfig.getAudit().getBranches(), branchName);
+                if (branchConfig != null) {
+                    config = ConfigMerge.merge(branchConfig, config);
+                } else {
+                    logger.info(String.format(
+                            "Unable to find configuration for branch '%s' in the %s config file, proceeding with default config.",
+                            branchConfig, ConfigReader.CONFIG_FILE_NAME));
+                }
             } catch (final IOException e) {
                 throw new AuditException("Failed to read config file", e);
             }
@@ -90,6 +98,18 @@ public class Auditor {
         HashMap<URI, Summary> report = readAssessment(workspace, uploaded, config.getFailOn());
 
         return collectResults(report);
+    }
+
+    private AuditConfig matchBranch(Branches branches, String branchName) {
+        GlobMatcher matcher = new GlobMatcher();
+        for (String key : branches.keySet()) {
+            if (matcher.matches(key, branchName)) {
+                logger.debug(String.format("Matched branch name '%s' to branch configuration '%s'", branchName, key));
+                return branches.get(key);
+            }
+        }
+
+        return null;
     }
 
     public void displayReport(AuditResults report, Workspace workspace) {

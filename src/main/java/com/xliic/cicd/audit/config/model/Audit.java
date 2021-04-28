@@ -7,7 +7,6 @@ package com.xliic.cicd.audit.config.model;
 
 public class Audit {
     private Branches branches;
-    private Tags tags;
 
     public Branches getBranches() {
         return this.branches;
@@ -17,11 +16,16 @@ public class Audit {
         this.branches = branches;
     }
 
+    /* Tags are not yet supported
+    
+    private Tags tags;
+    
     public Tags getTags() {
         return this.tags;
     }
-
+    
     public void setTags(Tags tags) {
         this.tags = tags;
     }
+    */
 }
