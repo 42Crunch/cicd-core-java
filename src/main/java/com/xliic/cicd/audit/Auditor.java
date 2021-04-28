@@ -99,6 +99,7 @@ public class Auditor {
         return collectResults(report);
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressFBWarnings("WMI_WRONG_MAP_ITERATOR")
     private AuditConfig matchBranch(Branches branches, String branchName) {
         GlobMatcher matcher = new GlobMatcher();
         for (String key : branches.keySet()) {
