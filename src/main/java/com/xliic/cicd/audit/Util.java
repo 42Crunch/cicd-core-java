@@ -35,7 +35,7 @@ public class Util {
     }
 
     public static String makeTechnicalCollectionName(String repoName, String branchName) {
-        // FIXME check for max name len
+        // FIXME check for max name len and for prohibited chars
         return String.format("%s@@%s", repoName, branchName);
     }
 }

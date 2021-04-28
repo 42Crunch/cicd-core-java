@@ -34,13 +34,19 @@ import com.xliic.common.Workspace;
 public class Auditor {
     private OpenApiFinder finder;
     private Logger logger;
-    private String platformUrl;
     private Client client;
+    private int minScore = 75;
+    private String cicdName;
+    private String platformUrl;
 
-    public Auditor(OpenApiFinder finder, Logger logger, Secret apiKey) {
+    public Auditor(OpenApiFinder finder, Logger logger, Secret apiKey, String platformUrl, String userAgent,
+            String cicdName) {
         this.finder = finder;
         this.logger = logger;
+        this.cicdName = cicdName;
+        this.platformUrl = platformUrl;
         this.client = new Client(apiKey, platformUrl, logger);
+        this.client.setUserAgent(userAgent);
     }
 
     public void setProxy(String proxyHost, int proxyPort) {
@@ -48,21 +54,14 @@ public class Auditor {
         logger.warn(String.format("Using proxy server: %s:%d ", proxyHost, proxyPort));
     }
 
-    public void setUserAgent(String userAgent) {
-        this.client.setUserAgent(userAgent);
-        logger.debug(String.format("Using user agent: %s", userAgent));
+    public void setMinScore(int minScore) {
+        this.minScore = minScore;
     }
 
-    public void setPlatformUrl(String platformUrl) {
-        this.platformUrl = platformUrl;
-        logger.warn(String.format("Using platform URL: %s ", platformUrl));
-        this.client.setPlatformUrl(platformUrl);
-    }
-
-    public AuditResults audit(Workspace workspace, String repoName, String branchName, int minScore)
+    public AuditResults audit(Workspace workspace, String repoName, String branchName)
             throws IOException, InterruptedException, AuditException {
 
-        AuditConfig config = DefaultConfig.create();
+        AuditConfig config = DefaultConfig.create(minScore);
         URI configFile = workspace.resolve(ConfigReader.CONFIG_FILE_NAME);
         if (workspace.exists(configFile)) {
             try {
@@ -89,7 +88,7 @@ public class Auditor {
         final RemoteApiMap uploaded = new RemoteApiMap();
         // discover and upload apis
         if (discovery.isEnabled()) {
-            uploaded.putAll(discoveryAuditor.audit(workspace, finder, repoName, branchName, "default",
+            uploaded.putAll(discoveryAuditor.audit(workspace, finder, repoName, branchName, cicdName,
                     discovery.getSearch(), mapping));
         }
 

@@ -10,7 +10,7 @@ public class DefaultConfig {
     private static final String[] DEFAULT_SEARCH = new String[] { "**/*.json", "**/*.yaml", "**/*.yml",
             "!node_modules/**", "!tsconfig.json" };
 
-    public static AuditConfig create() {
+    public static AuditConfig create(int minScore) {
         AuditConfig config = new AuditConfig();
 
         // discovery is enabled by default
@@ -23,7 +23,7 @@ public class DefaultConfig {
 
         // default overall score of 75 and fail on invalid contract
         FailOn failOn = new FailOn();
-        failOn.setScore(new Score(75));
+        failOn.setScore(new Score(minScore));
         failOn.setInvalidContract(true);
         config.setFailOn(failOn);
 

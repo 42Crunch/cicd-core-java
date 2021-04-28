@@ -5,7 +5,6 @@ import java.io.IOException;
 class AuditorImpl {
     LoggerImpl logger;
     private Auditor auditor;
-    private int score = 75;
     private WorkspaceImpl workspace;
     private AuditResults results;
 
@@ -14,17 +13,16 @@ class AuditorImpl {
         workspace = new WorkspaceImpl(dirname);
         Finder finder = new Finder(workspace);
         SecretImpl apiKey = new SecretImpl(System.getenv("TEST_API_KEY"));
-        auditor = new Auditor(finder, logger, apiKey);
-        auditor.setPlatformUrl("https://platform.dev.42crunch.com");
+        auditor = new Auditor(finder, logger, apiKey, "https://platform.dev.42crunch.com", "CICD Tests/1.0", "default");
     }
 
     AuditorImpl(String dirname, int score) throws IOException {
         this(dirname);
-        this.score = score;
+        auditor.setMinScore(score);
     }
 
     AuditResults audit(String branch) throws IOException, InterruptedException, AuditException {
-        this.results = auditor.audit(workspace, "https://github.com/42Crunch/cicd-core-java.git", branch, score);
+        this.results = auditor.audit(workspace, "https://github.com/42Crunch/cicd-core-java.git", branch);
         return this.results;
     }
 
