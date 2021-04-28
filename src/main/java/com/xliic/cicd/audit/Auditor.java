@@ -72,7 +72,7 @@ public class Auditor {
                 } else {
                     logger.info(String.format(
                             "Unable to find configuration for branch '%s' in the %s config file, proceeding with default config.",
-                            branchConfig, ConfigReader.CONFIG_FILE_NAME));
+                            branchName, ConfigReader.CONFIG_FILE_NAME));
                 }
             } catch (final IOException e) {
                 throw new AuditException("Failed to read config file", e);

@@ -111,16 +111,12 @@ public class DiscoveryAuditor {
 
         List<ApiAction> actions = createApiActions(apis.getResult(), files);
         for (ApiAction action : actions) {
-            switch (action.action) {
-            case ApiAction.DELETE:
+            if (action.action == ApiAction.DELETE) {
                 deleteApi(action.apiId);
-                break;
-            case ApiAction.CREATE:
+            } else if (action.action == ApiAction.CREATE) {
                 uploaded.put(action.file, createApi(action.file));
-                break;
-            case ApiAction.UPDATE:
+            } else if (action.action == ApiAction.UPDATE) {
                 uploaded.put(action.file, updateApi(action.file, action.apiId));
-                break;
             }
         }
 
@@ -248,7 +244,7 @@ public class DiscoveryAuditor {
         return openApiFiles;
     }
 
-    class ApiAction {
+    static class ApiAction {
         final static int CREATE = 1;
         final static int UPDATE = 2;
         final static int DELETE = 3;
