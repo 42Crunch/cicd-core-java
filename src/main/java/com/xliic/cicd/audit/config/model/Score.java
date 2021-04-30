@@ -19,26 +19,6 @@ public class Score {
         this.overall = overall;
     }
 
-    public Score(Score primary, Score secondary) {
-        if (primary != null) {
-            this.overall = primary.overall;
-            this.data = primary.data;
-            this.security = primary.security;
-        }
-
-        if (secondary != null) {
-            if (this.overall == null) {
-                this.overall = secondary.overall;
-            }
-            if (this.data == null) {
-                this.data = secondary.data;
-            }
-            if (this.security == null) {
-                this.security = secondary.security;
-            }
-        }
-    }
-
     @JsonCreator
     @SuppressWarnings("unchecked")
     private Score(Object value) {
@@ -46,11 +26,17 @@ public class Score {
             this.overall = (Integer) value;
         } else if (value instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) value;
+
             if (map.containsKey("data") && map.get("data") instanceof Integer) {
                 this.data = (Integer) map.get("data");
             }
+
             if (map.containsKey("security") && map.get("security") instanceof Integer) {
                 this.security = (Integer) map.get("security");
+            }
+
+            if (map.containsKey("overall") && map.get("overall") instanceof Integer) {
+                this.overall = (Integer) map.get("overall");
             }
         }
     }

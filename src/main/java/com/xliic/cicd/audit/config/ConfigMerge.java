@@ -1,10 +1,12 @@
 package com.xliic.cicd.audit.config;
 
 import com.xliic.cicd.audit.config.model.AuditConfig;
-import com.xliic.cicd.audit.config.model.Score;
 
 public class ConfigMerge {
     public static AuditConfig merge(AuditConfig primary, AuditConfig secondary) {
+
+        // FIXME improve merging
+
         if (secondary == null) {
             return primary;
         }
@@ -17,8 +19,10 @@ public class ConfigMerge {
             result.setFailOn(secondary.getFailOn());
         }
 
-        Score score = new Score(primary.getFailOn().getScore(), secondary.getFailOn().getScore());
-        result.getFailOn().setScore(score);
+        if (result.getFailOn().getScore() == null) {
+            // copy score from secondary config
+            result.getFailOn().setScore(secondary.getFailOn().getScore());
+        }
 
         if (primary.getDiscovery() != null) {
             result.setDiscovery(primary.getDiscovery());

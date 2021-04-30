@@ -22,7 +22,5 @@ public class AuditTest {
         assertTrue(failures.contains("Found 38 issues with severity \"medium\" or higher"));
         assertTrue(failures.contains("Found issue \"v3-global-http-clear\""));
         assertTrue(failures.contains("Found issue \"v3-response-schema-undefined\""));
-
-        System.out.println(Arrays.toString(result.report.index));
     }
 }

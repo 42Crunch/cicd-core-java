@@ -17,8 +17,7 @@ audit:
       # in addition to min score specified in the Azure Pipelines
       # check for the following issues
       fail_on:
-        score:
-          data: 67
+        score: 75          
 
         # fail if OpenAPI file is not 'valid' OpenAPI as per audit report
         invalid_contract: true

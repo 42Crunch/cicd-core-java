@@ -80,6 +80,11 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 30
+        },
+        "overall": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
         }
       },
       "additionalProperties": false
