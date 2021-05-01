@@ -6,6 +6,7 @@
       "type": "object",
       "properties": {
         "branches": {
+          "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/config"
           }
